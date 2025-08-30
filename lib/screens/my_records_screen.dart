@@ -24,6 +24,9 @@ class _MyRecordsScreenState extends State<MyRecordsScreen> with WidgetsBindingOb
   String? _selectedRoom;
   String? _selectedMonth;
   
+  // 快捷选择状态
+  String? _selectedQuickFilter;
+  
   // 筛选选项
   List<String> _availableMeterTypes = [];
   List<int> _availableFloors = [];
@@ -207,6 +210,7 @@ class _MyRecordsScreenState extends State<MyRecordsScreen> with WidgetsBindingOb
       _selectedFloor = null;
       _selectedRoom = null;
       _selectedMonth = null;
+      _selectedQuickFilter = null;
     });
     _updateFilterOptions();
     _applyFilters();
@@ -228,6 +232,7 @@ class _MyRecordsScreenState extends State<MyRecordsScreen> with WidgetsBindingOb
       // 这里可以扩展为多选，目前选择最近的一个月
       setState(() {
         _selectedMonth = recentMonths.first;
+        _selectedQuickFilter = months == 3 ? '近三月' : '近半年';
       });
       _applyFilters();
     }
@@ -238,6 +243,7 @@ class _MyRecordsScreenState extends State<MyRecordsScreen> with WidgetsBindingOb
     if (_availableMonths.contains(currentMonth)) {
       setState(() {
         _selectedMonth = currentMonth;
+        _selectedQuickFilter = '本月';
       });
       _applyFilters();
     }
@@ -250,21 +256,27 @@ class _MyRecordsScreenState extends State<MyRecordsScreen> with WidgetsBindingOb
     if (_availableMonths.contains(lastMonth)) {
       setState(() {
         _selectedMonth = lastMonth;
+        _selectedQuickFilter = '上月';
       });
       _applyFilters();
     }
   }
 
   Widget _buildQuickFilterChip(String label, VoidCallback onTap) {
+    final bool isSelected = _selectedQuickFilter == label;
     return ActionChip(
       label: Text(label),
       onPressed: onTap,
-      backgroundColor: AppTheme.primaryBlue.withOpacity(0.1),
+      backgroundColor: isSelected 
+          ? AppTheme.primaryBlue 
+          : AppTheme.primaryBlue.withOpacity(0.1),
       labelStyle: TextStyle(
-        color: AppTheme.primaryBlue,
+        color: isSelected ? Colors.white : AppTheme.primaryBlue,
         fontSize: 12,
+        fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
       ),
       padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      elevation: isSelected ? 2 : 0,
     );
   }
 
@@ -1029,6 +1041,7 @@ class _MyRecordsScreenState extends State<MyRecordsScreen> with WidgetsBindingOb
                         onChanged: (value) {
                           setState(() {
                             _selectedMonth = value;
+                            _selectedQuickFilter = null; // 手动选择时清除快捷选择状态
                           });
                           _applyFilters();
                         },
@@ -1225,13 +1238,10 @@ class _MyRecordsScreenState extends State<MyRecordsScreen> with WidgetsBindingOb
                                           Colors.grey.shade50,
                                         ],
                                       ),
-                                      border: Border.all(
-                                        color: _getMeterTypeColor(record.meterType).withOpacity(0.2),
-                                        width: 1.5,
-                                      ),
+
                                     ),
                                     child: Padding(
-                                      padding: EdgeInsets.all(20),
+                                      padding: const EdgeInsets.all(16),
                                       child: Column(
                                         crossAxisAlignment: CrossAxisAlignment.start,
                                         children: [
@@ -1240,7 +1250,7 @@ class _MyRecordsScreenState extends State<MyRecordsScreen> with WidgetsBindingOb
                                             children: [
                                               // 表计类型标签 - 更大更醒目
                                               Container(
-                                                padding: EdgeInsets.symmetric(
+                                                padding: const EdgeInsets.symmetric(
                                                   horizontal: 16,
                                                   vertical: 8,
                                                 ),
@@ -1256,7 +1266,7 @@ class _MyRecordsScreenState extends State<MyRecordsScreen> with WidgetsBindingOb
                                                     BoxShadow(
                                                       color: _getMeterTypeColor(record.meterType).withOpacity(0.3),
                                                       blurRadius: 8,
-                                                      offset: Offset(0, 2),
+                                                      offset: const Offset(0, 2),
                                                     ),
                                                   ],
                                                 ),
@@ -1268,7 +1278,7 @@ class _MyRecordsScreenState extends State<MyRecordsScreen> with WidgetsBindingOb
                                                       size: 18,
                                                       color: Colors.white,
                                                     ),
-                                                    SizedBox(width: 6),
+                                                    const SizedBox(width: 6),
                                                     Text(
                                                       record.meterType,
                                                       style: TextStyle(

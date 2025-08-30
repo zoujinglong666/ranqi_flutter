@@ -262,6 +262,79 @@ class _FloorManagementScreenState extends State<FloorManagementScreen> with Widg
     }
   }
 
+  Future<void> _deleteFloor(int floor) async {
+    final roomsInFloor = _getRoomsForFloor(floor);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('确认删除楼层'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('确定要删除 ${floor}楼 吗？'),
+            SizedBox(height: 8),
+            if (roomsInFloor.isNotEmpty) ...[
+              Text(
+                '该楼层包含 ${roomsInFloor.length} 个房间，删除后将无法恢复：',
+                style: TextStyle(color: Colors.red.shade700, fontWeight: FontWeight.w500),
+              ),
+              SizedBox(height: 4),
+              ...roomsInFloor.map((room) => Text(
+                '• 房间 ${room.roomNumber}',
+                style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+              )),
+            ] else ...[
+              Text(
+                '该楼层为空楼层',
+                style: TextStyle(color: Colors.grey.shade600),
+              ),
+            ],
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: Text('取消'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: Text('删除', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      // 删除该楼层的所有房间（包括占位符）
+      _rooms.removeWhere((room) => room.floor == floor);
+      await StorageService.saveRooms(_rooms);
+      
+      // 如果删除的是当前选中的楼层，切换到其他楼层
+      if (_selectedFloor == floor) {
+        final remainingFloors = _getAvailableFloors();
+        if (remainingFloors.isNotEmpty) {
+          setState(() {
+            _selectedFloor = remainingFloors.first;
+          });
+        } else {
+          setState(() {
+            _selectedFloor = 1; // 默认选择1楼
+          });
+        }
+      }
+      
+      await _loadRooms();
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('${floor}楼已删除'),
+          backgroundColor: Colors.red.shade600,
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final floors = _getAvailableFloors();
@@ -336,23 +409,28 @@ class _FloorManagementScreenState extends State<FloorManagementScreen> with Widg
                             ),
                           ),
                         ),
-                        child: ListTile(
-                          title: Text(
-                            '${floor}楼',
-                            style: TextStyle(
-                              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                              color: isSelected ? AppTheme.primaryBlue : AppTheme.textPrimary,
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
+                        child: GestureDetector(
                           onTap: () {
                             setState(() {
                               _selectedFloor = floor;
                             });
                           },
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: AppTheme.spacingS,
-                            vertical: AppTheme.spacingXS,
+                          onLongPress: () {
+                            _deleteFloor(floor);
+                          },
+                          child: ListTile(
+                            title: Text(
+                              '${floor}楼',
+                              style: TextStyle(
+                                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                color: isSelected ? AppTheme.primaryBlue : AppTheme.textPrimary,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: AppTheme.spacingS,
+                              vertical: AppTheme.spacingXS,
+                            ),
                           ),
                         ),
                       );
