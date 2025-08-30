@@ -1223,9 +1223,9 @@ class _MyRecordsScreenState extends State<MyRecordsScreen> with WidgetsBindingOb
                               child: Material(
                                 elevation: 4,
                                 shadowColor: Colors.black.withOpacity(0.08),
-                                borderRadius: BorderRadius.circular(20),
+                                borderRadius: BorderRadius.circular(16),
                                 child: InkWell(
-                                  borderRadius: BorderRadius.circular(20),
+                                  borderRadius: BorderRadius.circular(16),
                                   onTap: () => _showRecordDetail(record),
                                   child: Container(
                                     decoration: BoxDecoration(
@@ -1281,7 +1281,7 @@ class _MyRecordsScreenState extends State<MyRecordsScreen> with WidgetsBindingOb
                                                     const SizedBox(width: 6),
                                                     Text(
                                                       record.meterType,
-                                                      style: TextStyle(
+                                                      style: const TextStyle(
                                                         fontSize: 13,
                                                         fontWeight: FontWeight.bold,
                                                         color: Colors.white,
@@ -1294,7 +1294,7 @@ class _MyRecordsScreenState extends State<MyRecordsScreen> with WidgetsBindingOb
                                               Spacer(),
                                               // 时间标签
                                               Container(
-                                                padding: EdgeInsets.symmetric(
+                                                padding: const EdgeInsets.symmetric(
                                                   horizontal: 12,
                                                   vertical: 6,
                                                 ),

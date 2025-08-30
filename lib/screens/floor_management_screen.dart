@@ -13,7 +13,6 @@ class FloorManagementScreen extends StatefulWidget {
 class _FloorManagementScreenState extends State<FloorManagementScreen> with WidgetsBindingObserver {
   List<Room> _rooms = [];
   int _selectedFloor = 1;
-  final TextEditingController _roomController = TextEditingController();
   final TextEditingController _floorController = TextEditingController();
   
   // 事件订阅
@@ -75,41 +74,278 @@ class _FloorManagementScreenState extends State<FloorManagementScreen> with Widg
   }
 
   Future<void> _addRoom() async {
-    final roomNumber = _roomController.text.trim();
-    if (roomNumber.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('请输入房间号')),
+    final roomNumberController = TextEditingController();
+    final waterPriceController = TextEditingController(text: '3.0');
+    final electricityPriceController = TextEditingController(text: '0.6');
+    final initialWaterController = TextEditingController(text: '0.0');
+    final initialElectricityController = TextEditingController(text: '0.0');
+    final occupantNameController = TextEditingController();
+    final contactPhoneController = TextEditingController();
+    final checkInInfoController = TextEditingController();
+
+    final result = await showModalBottomSheet<Map<String, dynamic>>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Padding(
+        padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+        child: Container(
+        height: MediaQuery.of(context).size.height * 0.9,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.only(
+            topLeft: Radius.circular(20),
+            topRight: Radius.circular(20),
+          ),
+        ),
+        child: Column(
+          children: [
+            // 顶部拖拽条
+            Container(
+              margin: EdgeInsets.only(top: 12),
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey.shade300,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            // 标题栏
+            Container(
+              width: double.infinity,
+              padding: EdgeInsets.all(24),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.add_home,
+                    color: AppTheme.primaryBlue,
+                    size: 24,
+                  ),
+                  SizedBox(width: 12),
+                  Text(
+                    '添加房间',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.primaryBlue,
+                    ),
+                  ),
+                  Spacer(),
+                  IconButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    icon: Icon(Icons.close, color: Colors.grey.shade600),
+                  ),
+                ],
+              ),
+            ),
+            Divider(height: 1),
+            // 内容区域
+            Expanded(
+              child: SingleChildScrollView(
+                padding: EdgeInsets.all(24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildInputField(
+                      controller: roomNumberController,
+                      label: '房间号',
+                      hint: '请输入房间号',
+                      icon: Icons.room,
+                      autofocus: true,
+                    ),
+                    SizedBox(height: 20),
+                    _buildInputField(
+                      controller: waterPriceController,
+                      label: '水费单价',
+                      hint: '请输入水费单价',
+                      suffix: '元/吨',
+                      icon: Icons.water_drop,
+                      keyboardType: TextInputType.numberWithOptions(decimal: true),
+                    ),
+                    SizedBox(height: 20),
+                    _buildInputField(
+                      controller: electricityPriceController,
+                      label: '电费单价',
+                      hint: '请输入电费单价',
+                      suffix: '元/度',
+                      icon: Icons.electric_bolt,
+                      keyboardType: TextInputType.numberWithOptions(decimal: true),
+                    ),
+                    SizedBox(height: 20),
+                    _buildInputField(
+                      controller: initialWaterController,
+                      label: '初始水量',
+                      hint: '请输入初始水量',
+                      suffix: '吨',
+                      icon: Icons.water,
+                      keyboardType: TextInputType.numberWithOptions(decimal: true),
+                    ),
+                    SizedBox(height: 20),
+                    _buildInputField(
+                      controller: initialElectricityController,
+                      label: '初始电量',
+                      hint: '请输入初始电量',
+                      suffix: '度',
+                      icon: Icons.electrical_services,
+                      keyboardType: TextInputType.numberWithOptions(decimal: true),
+                    ),
+                    SizedBox(height: 20),
+                    _buildInputField(
+                      controller: occupantNameController,
+                      label: '入住人姓名',
+                      hint: '请输入入住人姓名（可选）',
+                      icon: Icons.person,
+                    ),
+                    SizedBox(height: 20),
+                    _buildInputField(
+                      controller: contactPhoneController,
+                      label: '联系电话',
+                      hint: '请输入联系电话（可选）',
+                      icon: Icons.phone,
+                      keyboardType: TextInputType.phone,
+                    ),
+                    SizedBox(height: 20),
+                    _buildInputField(
+                      controller: checkInInfoController,
+                      label: '入住信息',
+                      hint: '请输入入住信息（可选）',
+                      icon: Icons.info_outline,
+                      maxLines: 3,
+                    ),
+                    SizedBox(height: 40),
+                  ],
+                ),
+              ),
+            ),
+            // 按钮区域
+            Container(
+              width: double.infinity,
+              padding: EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                border: Border(top: BorderSide(color: Colors.grey.shade200)),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: TextButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      style: TextButton.styleFrom(
+                        padding: EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          side: BorderSide(color: Colors.grey.shade300),
+                        ),
+                      ),
+                      child: Text(
+                        '取消',
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: Colors.grey.shade600,
+                        ),
+                      ),
+                    ),
+                  ),
+                  SizedBox(width: 16),
+                  Expanded(
+                    flex: 2,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        final roomNumber = roomNumberController.text.trim();
+                        if (roomNumber.isEmpty) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('请输入房间号')),
+                          );
+                          return;
+                        }
+                        
+                        final waterPrice = double.tryParse(waterPriceController.text.trim()) ?? 3.0;
+                        final electricityPrice = double.tryParse(electricityPriceController.text.trim()) ?? 0.6;
+                        final initialWater = double.tryParse(initialWaterController.text.trim()) ?? 0.0;
+                        final initialElectricity = double.tryParse(initialElectricityController.text.trim()) ?? 0.0;
+                        final occupantName = occupantNameController.text.trim().isEmpty ? null : occupantNameController.text.trim();
+                        final contactPhone = contactPhoneController.text.trim().isEmpty ? null : contactPhoneController.text.trim();
+                        final checkInInfo = checkInInfoController.text.trim().isEmpty ? null : checkInInfoController.text.trim();
+                        
+                        Navigator.of(context).pop({
+                          'roomNumber': roomNumber,
+                          'waterPricePerTon': waterPrice,
+                          'electricityPricePerKwh': electricityPrice,
+                          'initialWaterAmount': initialWater,
+                          'initialElectricityAmount': initialElectricity,
+                          'occupantName': occupantName,
+                          'contactPhone': contactPhone,
+                          'checkInInfo': checkInInfo,
+                        });
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.primaryBlue,
+                        foregroundColor: Colors.white,
+                        padding: EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        elevation: 2,
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.add, size: 18),
+                          SizedBox(width: 8),
+                          Text(
+                            '添加房间',
+                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        ),
+      ),
+    );
+
+    if (result != null) {
+      final roomNumber = result['roomNumber'] as String;
+      
+      // 检查房间是否已存在
+      final existingRoom = _rooms.firstWhere(
+        (room) => room.floor == _selectedFloor && room.roomNumber == roomNumber,
+        orElse: () => Room(id: '', floor: -1, roomNumber: ''),
       );
-      return;
-    }
 
-    // 检查房间是否已存在
-    final existingRoom = _rooms.firstWhere(
-      (room) => room.floor == _selectedFloor && room.roomNumber == roomNumber,
-      orElse: () => Room(id: '', floor: -1, roomNumber: ''),
-    );
+      if (existingRoom.floor != -1) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('该房间已存在')),
+        );
+        return;
+      }
 
-    if (existingRoom.floor != -1) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('该房间已存在')),
+      final newRoom = Room(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        floor: _selectedFloor,
+        roomNumber: roomNumber,
+        waterPricePerTon: result['waterPricePerTon'] as double,
+        electricityPricePerKwh: result['electricityPricePerKwh'] as double,
+        initialWaterAmount: result['initialWaterAmount'] as double,
+        initialElectricityAmount: result['initialElectricityAmount'] as double,
+        occupantName: result['occupantName'] as String?,
+        contactPhone: result['contactPhone'] as String?,
+        checkInInfo: result['checkInInfo'] as String?,
       );
-      return;
+      
+      _rooms.add(newRoom);
+      await StorageService.saveRooms(_rooms);
+      _loadRooms();
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('房间添加成功')),
+      );
     }
-
-    final newRoom = Room(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      floor: _selectedFloor, 
-      roomNumber: roomNumber,
-    );
-    
-    _rooms.add(newRoom);
-    await StorageService.saveRooms(_rooms);
-    _roomController.clear();
-    _loadRooms();
-    
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('房间添加成功')),
-    );
   }
 
   Future<void> _deleteRoom(Room room) async {
@@ -142,45 +378,266 @@ class _FloorManagementScreenState extends State<FloorManagementScreen> with Widg
   }
 
   Future<void> _editRoom(Room room) async {
-    final controller = TextEditingController(text: room.roomNumber);
-    final newRoomNumber = await showDialog<String>(
+    final roomNumberController = TextEditingController(text: room.roomNumber);
+    final waterPriceController = TextEditingController(text: room.waterPricePerTon.toString());
+    final electricityPriceController = TextEditingController(text: room.electricityPricePerKwh.toString());
+    final initialWaterController = TextEditingController(text: room.initialWaterAmount.toString());
+    final initialElectricityController = TextEditingController(text: room.initialElectricityAmount.toString());
+    final occupantNameController = TextEditingController(text: room.occupantName ?? '');
+    final contactPhoneController = TextEditingController(text: room.contactPhone ?? '');
+    final checkInInfoController = TextEditingController(text: room.checkInInfo ?? '');
+
+    final result = await showModalBottomSheet<Map<String, dynamic>>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text('编辑房间号'),
-        content: TextField(
-          controller: controller,
-          decoration: InputDecoration(
-            labelText: '房间号',
-            hintText: '请输入新的房间号',
-            border: OutlineInputBorder(),
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Padding(
+        padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+        child: Container(
+          height: MediaQuery.of(context).size.height * 0.9,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.only(
+            topLeft: Radius.circular(20),
+            topRight: Radius.circular(20),
           ),
-          autofocus: true,
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: Text('取消'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(controller.text.trim()),
-            child: Text('保存'),
-          ),
-        ],
-      ),
-    );
+        child: Column(
+          children: [
+            // 顶部拖拽条
+            Container(
+              margin: EdgeInsets.only(top: 12),
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey.shade300,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            // 标题栏
+            Container(
+              width: double.infinity,
+              padding: EdgeInsets.all(24),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.edit,
+                    color: AppTheme.primaryBlue,
+                    size: 24,
+                  ),
+                  SizedBox(width: 12),
+                  Text(
+                    '编辑房间信息',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.primaryBlue,
+                    ),
+                  ),
+                  Spacer(),
+                  Container(
+                    padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: AppTheme.primaryBlue.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      '${room.floor}楼',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: AppTheme.primaryBlue,
+                      ),
+                    ),
+                  ),
+                  SizedBox(width: 8),
+                  IconButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    icon: Icon(Icons.close, color: Colors.grey.shade600),
+                  ),
+                ],
+              ),
+            ),
+            Divider(height: 1),
+            // 内容区域
+            Expanded(
+              child: SingleChildScrollView(
+                padding: EdgeInsets.all(24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildInputField(
+                      controller: roomNumberController,
+                      label: '房间号',
+                      hint: '请输入房间号',
+                      icon: Icons.room,
+                      autofocus: true,
+                    ),
+                    SizedBox(height: 20),
+                    _buildInputField(
+                      controller: waterPriceController,
+                      label: '水费单价',
+                      hint: '请输入水费单价',
+                      suffix: '元/吨',
+                      icon: Icons.water_drop,
+                      keyboardType: TextInputType.numberWithOptions(decimal: true),
+                    ),
+                    SizedBox(height: 20),
+                    _buildInputField(
+                      controller: electricityPriceController,
+                      label: '电费单价',
+                      hint: '请输入电费单价',
+                      suffix: '元/度',
+                      icon: Icons.electric_bolt,
+                      keyboardType: TextInputType.numberWithOptions(decimal: true),
+                    ),
+                    SizedBox(height: 20),
+                    _buildInputField(
+                      controller: initialWaterController,
+                      label: '初始水量',
+                      hint: '请输入初始水量',
+                      suffix: '吨',
+                      icon: Icons.water,
+                      keyboardType: TextInputType.numberWithOptions(decimal: true),
+                    ),
+                    SizedBox(height: 20),
+                    _buildInputField(
+                      controller: initialElectricityController,
+                      label: '初始电量',
+                      hint: '请输入初始电量',
+                      suffix: '度',
+                      icon: Icons.electrical_services,
+                      keyboardType: TextInputType.numberWithOptions(decimal: true),
+                    ),
+                    SizedBox(height: 20),
+                    _buildInputField(
+                      controller: occupantNameController,
+                      label: '入住人姓名',
+                      hint: '请输入入住人姓名（可选）',
+                      icon: Icons.person,
+                    ),
+                    SizedBox(height: 20),
+                    _buildInputField(
+                      controller: contactPhoneController,
+                      label: '联系电话',
+                      hint: '请输入联系电话（可选）',
+                      icon: Icons.phone,
+                      keyboardType: TextInputType.phone,
+                    ),
+                    SizedBox(height: 20),
+                    _buildInputField(
+                      controller: checkInInfoController,
+                      label: '入住信息',
+                      hint: '请输入入住信息（可选）',
+                      icon: Icons.info_outline,
+                      maxLines: 3,
+                    ),
+                    SizedBox(height: 40),
+                  ],
+                ),
+              ),
+            ),
+            // 按钮区域
+            Container(
+              width: double.infinity,
+              padding: EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                border: Border(top: BorderSide(color: Colors.grey.shade200)),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: TextButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      style: TextButton.styleFrom(
+                        padding: EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          side: BorderSide(color: Colors.grey.shade300),
+                        ),
+                      ),
+                      child: Text(
+                        '取消',
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: Colors.grey.shade600,
+                        ),
+                      ),
+                    ),
+                  ),
+                  SizedBox(width: 16),
+                  Expanded(
+                    flex: 2,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        final roomNumber = roomNumberController.text.trim();
+                        final waterPrice = double.tryParse(waterPriceController.text.trim()) ?? room.waterPricePerTon;
+                        final electricityPrice = double.tryParse(electricityPriceController.text.trim()) ?? room.electricityPricePerKwh;
+                        final initialWater = double.tryParse(initialWaterController.text.trim()) ?? room.initialWaterAmount;
+                        final initialElectricity = double.tryParse(initialElectricityController.text.trim()) ?? room.initialElectricityAmount;
+                        final occupantName = occupantNameController.text.trim().isEmpty ? null : occupantNameController.text.trim();
+                        final contactPhone = contactPhoneController.text.trim().isEmpty ? null : contactPhoneController.text.trim();
+                        final checkInInfo = checkInInfoController.text.trim().isEmpty ? null : checkInInfoController.text.trim();
+                        
+                        Navigator.of(context).pop({
+                          'roomNumber': roomNumber,
+                          'waterPricePerTon': waterPrice,
+                          'electricityPricePerKwh': electricityPrice,
+                          'initialWaterAmount': initialWater,
+                          'initialElectricityAmount': initialElectricity,
+                          'occupantName': occupantName,
+                          'contactPhone': contactPhone,
+                          'checkInInfo': checkInInfo,
+                        });
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.primaryBlue,
+                        foregroundColor: Colors.white,
+                        padding: EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        elevation: 2,
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.save, size: 18),
+                          SizedBox(width: 8),
+                          Text(
+                            '保存修改',
+                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+           ],
+         ),
+         ),
+       ),
+     );
 
-    if (newRoomNumber != null && newRoomNumber.isNotEmpty && newRoomNumber != room.roomNumber) {
-      // 检查新房间号是否已存在
-      final existingRoom = _rooms.firstWhere(
-        (r) => r.floor == room.floor && r.roomNumber == newRoomNumber && r.id != room.id,
-        orElse: () => Room(id: '', floor: -1, roomNumber: ''),
-      );
-
-      if (existingRoom.floor != -1) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('该房间号已存在')),
+    if (result != null) {
+      final newRoomNumber = result['roomNumber'] as String;
+      
+      // 检查新房间号是否已存在（如果房间号有变化）
+      if (newRoomNumber != room.roomNumber) {
+        final existingRoom = _rooms.firstWhere(
+          (r) => r.floor == room.floor && r.roomNumber == newRoomNumber && r.id != room.id,
+          orElse: () => Room(id: '', floor: -1, roomNumber: ''),
         );
-        return;
+
+        if (existingRoom.floor != -1) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('该房间号已存在')),
+          );
+          return;
+        }
       }
 
       // 更新房间信息
@@ -190,12 +647,19 @@ class _FloorManagementScreenState extends State<FloorManagementScreen> with Widg
           id: room.id,
           floor: room.floor,
           roomNumber: newRoomNumber,
+          waterPricePerTon: result['waterPricePerTon'] as double,
+          electricityPricePerKwh: result['electricityPricePerKwh'] as double,
+          initialWaterAmount: result['initialWaterAmount'] as double,
+          initialElectricityAmount: result['initialElectricityAmount'] as double,
+          occupantName: result['occupantName'] as String?,
+          contactPhone: result['contactPhone'] as String?,
+          checkInInfo: result['checkInInfo'] as String?,
         );
         await StorageService.saveRooms(_rooms);
         _loadRooms();
         
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('房间号修改成功')),
+          SnackBar(content: Text('房间信息修改成功')),
         );
       }
     }
@@ -486,19 +950,17 @@ class _FloorManagementScreenState extends State<FloorManagementScreen> with Widg
                     child: Row(
                       children: [
                         Expanded(
-                          child: TextField(
-                            controller: _roomController,
-                            decoration: AppStyles.inputDecoration(
-                              labelText: '房间号',
-                              prefixIcon: Icons.add_home,
+                          child: Text(
+                            '点击添加按钮创建新房间',
+                            style: TextStyle(
+                              color: Colors.grey.shade600,
+                              fontSize: AppTheme.fontSizeBody,
                             ),
-                            onSubmitted: (_) => _addRoom(),
                           ),
                         ),
-                        const SizedBox(width: AppTheme.spacingM),
                         AppStyles.primaryButton(
-                          text: '添加',
-                          icon: Icons.add,
+                          text: '添加房间',
+                          icon: Icons.add_home,
                           onPressed: _addRoom,
                         ),
                       ],
@@ -618,12 +1080,76 @@ class _FloorManagementScreenState extends State<FloorManagementScreen> with Widg
     ).first; // 使用第一个订阅即可，因为回调函数相同
   }
 
+  Widget _buildInputField({
+    required TextEditingController controller,
+    required String label,
+    required String hint,
+    required IconData icon,
+    String? suffix,
+    TextInputType? keyboardType,
+    bool autofocus = false,
+    int maxLines = 1,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(
+              icon,
+              size: 20,
+              color: AppTheme.primaryBlue,
+            ),
+            SizedBox(width: 8),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: Colors.grey.shade700,
+              ),
+            ),
+          ],
+        ),
+        SizedBox(height: 8),
+        TextField(
+          controller: controller,
+          keyboardType: keyboardType,
+          autofocus: autofocus,
+          maxLines: maxLines,
+          decoration: InputDecoration(
+            hintText: hint,
+            suffixText: suffix,
+            suffixStyle: TextStyle(
+              color: Colors.grey.shade600,
+              fontSize: 14,
+            ),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: Colors.grey.shade300),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: Colors.grey.shade300),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: AppTheme.primaryBlue, width: 2),
+            ),
+            filled: true,
+            fillColor: Colors.grey.shade50,
+            contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+          ),
+        ),
+      ],
+    );
+  }
+
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     // 取消事件订阅
     _roomEventSubscription?.cancel();
-    _roomController.dispose();
     _floorController.dispose();
     super.dispose();
   }
