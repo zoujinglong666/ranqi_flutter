@@ -1,8 +1,10 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../models/meter_record.dart';
 import '../services/storage_service.dart';
+import '../services/event_manager.dart';
 import '../theme/app_theme.dart';
 
 class MyRecordsScreen extends StatefulWidget {
@@ -27,6 +29,9 @@ class _MyRecordsScreenState extends State<MyRecordsScreen> with WidgetsBindingOb
   List<int> _availableFloors = [];
   List<String> _availableRooms = [];
   List<String> _availableMonths = [];
+  
+  // 事件订阅
+  StreamSubscription<EventData>? _recordEventSubscription;
 
   @override
   void initState() {
@@ -34,12 +39,36 @@ class _MyRecordsScreenState extends State<MyRecordsScreen> with WidgetsBindingOb
     _loadRecords();
     // 监听应用生命周期变化
     WidgetsBinding.instance.addObserver(this);
+    // 订阅记录相关事件
+    _subscribeToEvents();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // 每次页面被访问时重新加载数据
+    _loadRecords();
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    // 取消事件订阅
+    _recordEventSubscription?.cancel();
     super.dispose();
+  }
+  
+  /// 订阅事件
+  void _subscribeToEvents() {
+    _recordEventSubscription = eventManager.subscribeMultiple(
+      [EventType.recordAdded, EventType.recordUpdated, EventType.recordDeleted],
+      (eventData) {
+        // 当有记录相关事件时，重新加载数据
+        if (mounted) {
+          _loadRecords();
+        }
+      },
+    ).first; // 使用第一个订阅即可，因为回调函数相同
   }
 
   @override
@@ -54,6 +83,8 @@ class _MyRecordsScreenState extends State<MyRecordsScreen> with WidgetsBindingOb
   Future<void> _loadRecords() async {
     try {
       final records = await StorageService.getMeterRecords();
+      // 按时间倒序排列，最新的记录在前面
+      records.sort((a, b) => b.timestamp.compareTo(a.timestamp));
       setState(() {
         _allRecords = records;
         _filteredRecords = records;

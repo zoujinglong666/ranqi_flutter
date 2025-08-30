@@ -9,6 +9,7 @@ import '../models/meter_record.dart';
 import '../models/room.dart';
 import '../services/storage_service.dart';
 import '../services/recognition_service.dart';
+import '../services/event_manager.dart';
 import '../theme/app_theme.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -239,6 +240,16 @@ class _HomeScreenState extends State<HomeScreen> {
 
       await StorageService.saveMeterRecord(record);
       
+      // 发布记录新增事件
+      eventManager.publish(
+        EventType.recordAdded,
+        data: {
+          'record': record,
+          'floor': floor,
+          'roomNumber': roomNumber,
+        },
+      );
+      
       // 如果是手动输入的楼层和房间号，自动添加到楼层管理
       if (_floorController.text.isNotEmpty && _roomController.text.isNotEmpty) {
         final existingRoom = _availableRooms.firstWhere(
@@ -255,6 +266,16 @@ class _HomeScreenState extends State<HomeScreen> {
           );
           await StorageService.saveRoom(newRoom);
           await _loadRooms(); // 重新加载房间列表
+          
+          // 发布房间新增事件
+          eventManager.publish(
+            EventType.roomAdded,
+            data: {
+              'room': newRoom,
+              'floor': floor,
+              'roomNumber': roomNumber,
+            },
+          );
           
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text('记录保存成功，已自动添加房间 ${floor}楼${roomNumber}')),

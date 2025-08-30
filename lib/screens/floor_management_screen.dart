@@ -1,6 +1,8 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../models/room.dart';
 import '../services/storage_service.dart';
+import '../services/event_manager.dart';
 import '../theme/app_theme.dart';
 
 class FloorManagementScreen extends StatefulWidget {
@@ -13,6 +15,9 @@ class _FloorManagementScreenState extends State<FloorManagementScreen> with Widg
   int _selectedFloor = 1;
   final TextEditingController _roomController = TextEditingController();
   final TextEditingController _floorController = TextEditingController();
+  
+  // 事件订阅
+  StreamSubscription<EventData>? _roomEventSubscription;
 
   @override
   void initState() {
@@ -20,6 +25,15 @@ class _FloorManagementScreenState extends State<FloorManagementScreen> with Widg
     _loadRooms();
     // 监听应用生命周期变化
     WidgetsBinding.instance.addObserver(this);
+    // 订阅房间相关事件
+    _subscribeToEvents();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // 每次页面被访问时重新加载数据
+    _loadRooms();
   }
 
   @override
@@ -46,7 +60,18 @@ class _FloorManagementScreenState extends State<FloorManagementScreen> with Widg
   }
 
   List<Room> _getRoomsForFloor(int floor) {
-    return _rooms.where((room) => room.floor == floor && room.roomNumber != '_PLACEHOLDER_').toList();
+    final roomsForFloor = _rooms.where((room) => room.floor == floor && room.roomNumber != '_PLACEHOLDER_').toList();
+    // 按房间号排序
+    roomsForFloor.sort((a, b) {
+      // 尝试按数字排序，如果不是数字则按字符串排序
+      final aNum = int.tryParse(a.roomNumber);
+      final bNum = int.tryParse(b.roomNumber);
+      if (aNum != null && bNum != null) {
+        return aNum.compareTo(bNum);
+      }
+      return a.roomNumber.compareTo(b.roomNumber);
+    });
+    return roomsForFloor;
   }
 
   Future<void> _addRoom() async {
@@ -502,9 +527,24 @@ class _FloorManagementScreenState extends State<FloorManagementScreen> with Widg
     );
   }
 
+  /// 订阅事件
+  void _subscribeToEvents() {
+    _roomEventSubscription = eventManager.subscribeMultiple(
+      [EventType.roomAdded, EventType.roomUpdated, EventType.roomDeleted, EventType.recordAdded],
+      (eventData) {
+        // 当有房间相关事件或新增记录时，重新加载数据
+        if (mounted) {
+          _loadRooms();
+        }
+      },
+    ).first; // 使用第一个订阅即可，因为回调函数相同
+  }
+
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    // 取消事件订阅
+    _roomEventSubscription?.cancel();
     _roomController.dispose();
     _floorController.dispose();
     super.dispose();
