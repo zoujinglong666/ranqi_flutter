@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:uuid/uuid.dart';
 import '../models/room.dart';
 import '../services/storage_service.dart';
+import '../theme/app_theme.dart';
 
 class FloorManagementScreen extends StatefulWidget {
   @override
@@ -11,9 +11,8 @@ class FloorManagementScreen extends StatefulWidget {
 class _FloorManagementScreenState extends State<FloorManagementScreen> {
   List<Room> _rooms = [];
   int _selectedFloor = 1;
-  List<int> _availableFloors = [];
-  String? _editingRoomId; // 当前正在编辑的房间ID
-  final Map<String, TextEditingController> _editControllers = {}; // 编辑控制器
+  final TextEditingController _roomController = TextEditingController();
+  final TextEditingController _floorController = TextEditingController();
 
   @override
   void initState() {
@@ -21,283 +20,226 @@ class _FloorManagementScreenState extends State<FloorManagementScreen> {
     _loadRooms();
   }
 
-  @override
-  void dispose() {
-    // 清理所有编辑控制器
-    _editControllers.values.forEach((controller) => controller.dispose());
-    super.dispose();
-  }
-
   Future<void> _loadRooms() async {
     final rooms = await StorageService.getRooms();
     setState(() {
       _rooms = rooms;
-      _updateAvailableFloors();
     });
   }
 
-  void _updateAvailableFloors() {
+  List<int> _getAvailableFloors() {
     final floors = _rooms.map((room) => room.floor).toSet().toList();
     floors.sort();
-    if (floors.isEmpty) {
-      floors.add(1); // 默认添加1楼
-    }
-    setState(() {
-      _availableFloors = floors;
-      if (!_availableFloors.contains(_selectedFloor)) {
-        _selectedFloor = _availableFloors.first;
-      }
-    });
+    if (floors.isEmpty) floors.add(1);
+    return floors;
   }
 
   List<Room> _getRoomsForFloor(int floor) {
-    return _rooms.where((room) => room.floor == floor).toList()
-      ..sort((a, b) => a.roomNumber.compareTo(b.roomNumber)); // 按房间号排序
+    return _rooms.where((room) => room.floor == floor && room.roomNumber != '_PLACEHOLDER_').toList();
   }
 
-  Future<void> _addRoom(String roomNumber) async {
-    // 检查房间号是否已存在
-    final existingRoom = _rooms.firstWhere(
-      (room) => room.floor == _selectedFloor && room.roomNumber == roomNumber,
-      orElse: () => Room(id: '', floor: 0, roomNumber: ''),
-    );
-    
-    if (existingRoom.id.isNotEmpty) {
+  Future<void> _addRoom() async {
+    final roomNumber = _roomController.text.trim();
+    if (roomNumber.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('房间号 $roomNumber 已存在')),
+        SnackBar(content: Text('请输入房间号')),
       );
       return;
     }
-    
-    final room = Room(
-      id: Uuid().v4(),
-      floor: _selectedFloor,
+
+    // 检查房间是否已存在
+    final existingRoom = _rooms.firstWhere(
+      (room) => room.floor == _selectedFloor && room.roomNumber == roomNumber,
+      orElse: () => Room(id: '', floor: -1, roomNumber: ''),
+    );
+
+    if (existingRoom.floor != -1) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('该房间已存在')),
+      );
+      return;
+    }
+
+    final newRoom = Room(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      floor: _selectedFloor, 
       roomNumber: roomNumber,
     );
     
-    setState(() {
-      _rooms.add(room);
-    });
+    _rooms.add(newRoom);
+    await StorageService.saveRooms(_rooms);
+    _roomController.clear();
+    _loadRooms();
     
-    await _saveRooms();
-    _updateAvailableFloors();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('房间添加成功')),
+    );
   }
 
   Future<void> _deleteRoom(Room room) async {
-    setState(() {
-      _rooms.removeWhere((r) => r.id == room.id);
-      // 如果正在编辑这个房间，取消编辑状态
-      if (_editingRoomId == room.id) {
-        _editingRoomId = null;
-        _editControllers[room.id]?.dispose();
-        _editControllers.remove(room.id);
-      }
-    });
-    
-    await _saveRooms();
-    _updateAvailableFloors();
-  }
-
-  Future<void> _editRoom(Room oldRoom, String newRoomNumber) async {
-    // 检查新房间号是否已存在（排除当前房间）
-    final existingRoom = _rooms.firstWhere(
-      (room) => room.floor == oldRoom.floor && 
-                room.roomNumber == newRoomNumber && 
-                room.id != oldRoom.id,
-      orElse: () => Room(id: '', floor: 0, roomNumber: ''),
-    );
-    
-    if (existingRoom.id.isNotEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('房间号 $newRoomNumber 已存在')),
-      );
-      return;
-    }
-    
-    final index = _rooms.indexWhere((r) => r.id == oldRoom.id);
-    if (index != -1) {
-      setState(() {
-        _rooms[index] = Room(
-          id: oldRoom.id,
-          floor: oldRoom.floor,
-          roomNumber: newRoomNumber,
-        );
-        _editingRoomId = null; // 退出编辑状态
-      });
-      
-      // 清理编辑控制器
-      _editControllers[oldRoom.id]?.dispose();
-      _editControllers.remove(oldRoom.id);
-      
-      await _saveRooms();
-    }
-  }
-
-  // 统一的保存方法，确保持久化
-  Future<void> _saveRooms() async {
-    try {
-      await StorageService.saveRooms(_rooms);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('保存成功'), duration: Duration(seconds: 1)),
-      );
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('保存失败: $e')),
-      );
-    }
-  }
-
-  // 开始编辑房间
-  void _startEditRoom(Room room) {
-    setState(() {
-      _editingRoomId = room.id;
-    });
-    
-    // 创建编辑控制器
-    _editControllers[room.id] = TextEditingController(text: room.roomNumber);
-  }
-
-  // 取消编辑
-  void _cancelEdit(String roomId) {
-    setState(() {
-      _editingRoomId = null;
-    });
-    
-    // 清理编辑控制器
-    _editControllers[roomId]?.dispose();
-    _editControllers.remove(roomId);
-  }
-
-  // 保存编辑
-  void _saveEdit(Room room) {
-    final newRoomNumber = _editControllers[room.id]?.text.trim() ?? '';
-    if (newRoomNumber.isNotEmpty) {
-      _editRoom(room, newRoomNumber);
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('房间号不能为空')),
-      );
-    }
-  }
-
-  void _showAddRoomDialog() {
-    final controller = TextEditingController();
-    
-    showDialog(
+    final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('添加房间'),
+        title: Text('确认删除'),
+        content: Text('确定要删除 ${room.floor}楼 ${room.roomNumber} 房间吗？'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: Text('取消'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: Text('删除', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      _rooms.removeWhere((r) => r.id == room.id);
+      await StorageService.saveRooms(_rooms);
+      _loadRooms();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('房间删除成功')),
+      );
+    }
+  }
+
+  Future<void> _editRoom(Room room) async {
+    final controller = TextEditingController(text: room.roomNumber);
+    final newRoomNumber = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('编辑房间号'),
         content: TextField(
           controller: controller,
           decoration: InputDecoration(
             labelText: '房间号',
-            hintText: '例如: 101, A01',
+            hintText: '请输入新的房间号',
+            border: OutlineInputBorder(),
           ),
           autofocus: true,
-          onSubmitted: (value) {
-            if (value.trim().isNotEmpty) {
-              _addRoom(value.trim());
-              Navigator.pop(context);
-            }
-          },
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.of(context).pop(),
             child: Text('取消'),
           ),
           TextButton(
-            onPressed: () {
-              final roomNumber = controller.text.trim();
-              if (roomNumber.isNotEmpty) {
-                _addRoom(roomNumber);
-                Navigator.pop(context);
-              } else {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('房间号不能为空')),
-                );
-              }
-            },
-            child: Text('添加'),
+            onPressed: () => Navigator.of(context).pop(controller.text.trim()),
+            child: Text('保存'),
           ),
         ],
       ),
     );
+
+    if (newRoomNumber != null && newRoomNumber.isNotEmpty && newRoomNumber != room.roomNumber) {
+      // 检查新房间号是否已存在
+      final existingRoom = _rooms.firstWhere(
+        (r) => r.floor == room.floor && r.roomNumber == newRoomNumber && r.id != room.id,
+        orElse: () => Room(id: '', floor: -1, roomNumber: ''),
+      );
+
+      if (existingRoom.floor != -1) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('该房间号已存在')),
+        );
+        return;
+      }
+
+      // 更新房间信息
+      final index = _rooms.indexWhere((r) => r.id == room.id);
+      if (index != -1) {
+        _rooms[index] = Room(
+          id: room.id,
+          floor: room.floor,
+          roomNumber: newRoomNumber,
+        );
+        await StorageService.saveRooms(_rooms);
+        _loadRooms();
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('房间号修改成功')),
+        );
+      }
+    }
   }
 
-  void _showAddFloorDialog() {
-    final controller = TextEditingController();
-    
-    showDialog(
+  Future<void> _addFloor() async {
+    final floorNumber = await showDialog<int>(
       context: context,
       builder: (context) => AlertDialog(
         title: Text('添加楼层'),
         content: TextField(
-          controller: controller,
-          decoration: InputDecoration(
+          controller: _floorController,
+          decoration: AppStyles.inputDecoration(
             labelText: '楼层号',
-            hintText: '例如: 2, 3, 4',
+            hintText: '请输入楼层号',
           ),
           keyboardType: TextInputType.number,
           autofocus: true,
-          onSubmitted: (value) {
-            final floor = int.tryParse(value);
-            if (floor != null && floor > 0 && !_availableFloors.contains(floor)) {
-              setState(() {
-                _availableFloors.add(floor);
-                _availableFloors.sort();
-                _selectedFloor = floor;
-              });
-              Navigator.pop(context);
-            }
-          },
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.of(context).pop(),
             child: Text('取消'),
           ),
           TextButton(
             onPressed: () {
-              final floor = int.tryParse(controller.text);
-              if (floor != null && floor > 0) {
-                if (!_availableFloors.contains(floor)) {
-                  setState(() {
-                    _availableFloors.add(floor);
-                    _availableFloors.sort();
-                    _selectedFloor = floor;
-                  });
-                  Navigator.pop(context);
-                } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('楼层 $floor 已存在')),
-                  );
-                }
-              } else {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('请输入有效的楼层号')),
-                );
-              }
+              final floor = int.tryParse(_floorController.text.trim());
+              Navigator.of(context).pop(floor);
             },
             child: Text('添加'),
           ),
         ],
       ),
     );
+
+    if (floorNumber != null && floorNumber > 0) {
+      final floors = _getAvailableFloors();
+      if (!floors.contains(floorNumber)) {
+        // 创建一个占位房间来确保楼层被保存和显示
+        final placeholderRoom = Room(
+          id: 'floor_${floorNumber}_placeholder_${DateTime.now().millisecondsSinceEpoch}',
+          floor: floorNumber,
+          roomNumber: '_PLACEHOLDER_', // 使用特殊标记作为占位符
+        );
+        
+        _rooms.add(placeholderRoom);
+        await StorageService.saveRooms(_rooms);
+        
+        setState(() {
+          _selectedFloor = floorNumber;
+        });
+        
+        _floorController.clear();
+        await _loadRooms(); // 重新加载数据以更新UI
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('楼层添加成功，请添加房间')),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('该楼层已存在')),
+        );
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    final floors = _getAvailableFloors();
     final currentFloorRooms = _getRoomsForFloor(_selectedFloor);
-    
+
     return Scaffold(
       appBar: AppBar(
-        title: Text('楼层管理'),
-        backgroundColor: Colors.blue,
+        title: const Text('楼层管理'),
+        backgroundColor: Colors.white,
+        elevation: 0,
         actions: [
           IconButton(
-            onPressed: _showAddFloorDialog,
-            icon: Icon(Icons.add_home),
+            icon: const Icon(Icons.add_home),
+            onPressed: _addFloor,
             tooltip: '添加楼层',
           ),
         ],
@@ -307,53 +249,72 @@ class _FloorManagementScreenState extends State<FloorManagementScreen> {
           // 左侧楼层列表
           Container(
             width: 120,
-            color: Colors.grey.shade100,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              border: Border(
+                right: BorderSide(
+                  color: Colors.grey.shade300,
+                  width: 1,
+                ),
+              ),
+            ),
             child: Column(
               children: [
                 Container(
-                  padding: EdgeInsets.all(16),
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(AppTheme.spacingM),
+                  decoration: BoxDecoration(
+                    color: AppTheme.primaryBlue.withOpacity(0.1),
+                    border: Border(
+                      bottom: BorderSide(
+                        color: Colors.grey.shade300,
+                        width: 1,
+                      ),
+                    ),
+                  ),
                   child: Text(
                     '楼层',
-                    style: TextStyle(
-                      fontSize: 16,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.bold,
+                      color: AppTheme.primaryBlue,
                     ),
+                    textAlign: TextAlign.center,
                   ),
                 ),
                 Expanded(
                   child: ListView.builder(
-                    itemCount: _availableFloors.length,
+                    itemCount: floors.length,
                     itemBuilder: (context, index) {
-                      final floor = _availableFloors[index];
+                      final floor = floors[index];
                       final isSelected = floor == _selectedFloor;
                       
                       return Container(
-                        margin: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                        child: Material(
-                          color: isSelected ? Colors.blue : Colors.transparent,
-                          borderRadius: BorderRadius.circular(8),
-                          child: InkWell(
-                            borderRadius: BorderRadius.circular(8),
-                            onTap: () {
-                              setState(() {
-                                _selectedFloor = floor;
-                                // 切换楼层时取消编辑状态
-                                _editingRoomId = null;
-                                _editControllers.values.forEach((controller) => controller.dispose());
-                                _editControllers.clear();
-                              });
-                            },
-                            child: Container(
-                              padding: EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-                              child: Text(
-                                '${floor}楼',
-                                style: TextStyle(
-                                  color: isSelected ? Colors.white : Colors.black87,
-                                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                                ),
-                                textAlign: TextAlign.center,
-                              ),
+                        decoration: BoxDecoration(
+                          color: isSelected ? AppTheme.primaryBlue.withOpacity(0.1) : Colors.transparent,
+                          border: Border(
+                            bottom: BorderSide(
+                              color: Colors.grey.shade200,
+                              width: 0.5,
                             ),
+                          ),
+                        ),
+                        child: ListTile(
+                          title: Text(
+                            '${floor}楼',
+                            style: TextStyle(
+                              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                              color: isSelected ? AppTheme.primaryBlue : AppTheme.textPrimary,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                          onTap: () {
+                            setState(() {
+                              _selectedFloor = floor;
+                            });
+                          },
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: AppTheme.spacingS,
+                            vertical: AppTheme.spacingXS,
                           ),
                         ),
                       );
@@ -364,176 +325,175 @@ class _FloorManagementScreenState extends State<FloorManagementScreen> {
             ),
           ),
           
-          // 右侧房间列表
+          // 右侧房间管理
           Expanded(
-            child: Column(
-              children: [
-                Container(
-                  padding: EdgeInsets.all(16),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        '${_selectedFloor}楼房间 (${currentFloorRooms.length}间)',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
+            child: Container(
+              color: AppTheme.backgroundPrimary,
+              child: Column(
+                children: [
+                  // 房间列表标题
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(AppTheme.spacingM),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      border: Border(
+                        bottom: BorderSide(
+                          color: Colors.grey.shade300,
+                          width: 1,
                         ),
                       ),
-                      ElevatedButton.icon(
-                        onPressed: _showAddRoomDialog,
-                        icon: Icon(Icons.add),
-                        label: Text('添加房间'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.green,
-                          foregroundColor: Colors.white,
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.door_front_door,
+                          color: AppTheme.primaryBlue,
+                          size: 20,
                         ),
-                      ),
-                    ],
-                  ),
-                ),
-                Expanded(
-                  child: currentFloorRooms.isEmpty
-                      ? Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.home_outlined, size: 64, color: Colors.grey),
-                              SizedBox(height: 16),
-                              Text(
-                                '${_selectedFloor}楼暂无房间',
-                                style: TextStyle(color: Colors.grey, fontSize: 16),
-                              ),
-                              SizedBox(height: 8),
-                              Text(
-                                '点击上方"添加房间"按钮开始添加',
-                                style: TextStyle(color: Colors.grey),
-                              ),
-                            ],
+                        const SizedBox(width: AppTheme.spacingS),
+                        Text(
+                          '${_selectedFloor}楼房间 (${currentFloorRooms.length}间)',
+                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: AppTheme.textPrimary,
                           ),
-                        )
-                      : ListView.builder(
-                          padding: EdgeInsets.all(16),
-                          itemCount: currentFloorRooms.length,
-                          itemBuilder: (context, index) {
-                            final room = currentFloorRooms[index];
-                            final isEditing = _editingRoomId == room.id;
-                            
-                            return Card(
-                              margin: EdgeInsets.only(bottom: 8),
-                              child: Padding(
-                                padding: EdgeInsets.all(16),
-                                child: Row(
-                                  children: [
-                                    // 房间图标
-                                    Icon(
+                        ),
+                      ],
+                    ),
+                  ),
+                  
+                  // 添加房间区域
+                  Container(
+                    color: Colors.white,
+                    padding: const EdgeInsets.all(AppTheme.spacingM),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: _roomController,
+                            decoration: AppStyles.inputDecoration(
+                              labelText: '房间号',
+                              hintText: '如: 101, 102...',
+                              prefixIcon: Icons.add_home,
+                            ),
+                            onSubmitted: (_) => _addRoom(),
+                          ),
+                        ),
+                        const SizedBox(width: AppTheme.spacingM),
+                        AppStyles.primaryButton(
+                          text: '添加',
+                          icon: Icons.add,
+                          onPressed: _addRoom,
+                          width: 100,
+                        ),
+                      ],
+                    ),
+                  ),
+                  
+                  // 房间列表
+                  Expanded(
+                    child: currentFloorRooms.isEmpty
+                        ? Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.home_outlined,
+                                  size: 64,
+                                  color: Colors.grey.shade400,
+                                ),
+                                const SizedBox(height: AppTheme.spacingM),
+                                Text(
+                                  '${_selectedFloor}楼暂无房间',
+                                  style: TextStyle(
+                                    fontSize: AppTheme.fontSizeSubtitle,
+                                    color: Colors.grey.shade600,
+                                  ),
+                                ),
+                                const SizedBox(height: AppTheme.spacingS),
+                                Text(
+                                  '请添加房间信息',
+                                  style: TextStyle(
+                                    fontSize: AppTheme.fontSizeBody,
+                                    color: Colors.grey.shade500,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          )
+                        : ListView.builder(
+                            padding: const EdgeInsets.all(AppTheme.spacingM),
+                            itemCount: currentFloorRooms.length,
+                            itemBuilder: (context, index) {
+                              final room = currentFloorRooms[index];
+                              
+                              return Container(
+                                margin: const EdgeInsets.only(bottom: AppTheme.spacingS),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+                                  boxShadow: AppTheme.cardShadow,
+                                ),
+                                child: ListTile(
+                                  leading: Container(
+                                    padding: const EdgeInsets.all(AppTheme.spacingS),
+                                    decoration: BoxDecoration(
+                                      color: AppTheme.primaryBlue.withOpacity(0.1),
+                                      borderRadius: BorderRadius.circular(AppTheme.radiusSmall),
+                                    ),
+                                    child: Icon(
                                       Icons.door_front_door,
-                                      color: Colors.blue,
-                                      size: 24,
+                                      color: AppTheme.primaryBlue,
+                                      size: 20,
                                     ),
-                                    SizedBox(width: 16),
-                                    
-                                    // 房间信息（左侧）
-                                    Expanded(
-                                      child: isEditing
-                                          ? TextField(
-                                              controller: _editControllers[room.id],
-                                              decoration: InputDecoration(
-                                                labelText: '房间号',
-                                                border: OutlineInputBorder(),
-                                                contentPadding: EdgeInsets.symmetric(
-                                                  horizontal: 12,
-                                                  vertical: 8,
-                                                ),
-                                              ),
-                                              autofocus: true,
-                                              onSubmitted: (_) => _saveEdit(room),
-                                            )
-                                          : InkWell(
-                                              onTap: () => _startEditRoom(room),
-                                              child: Container(
-                                                padding: EdgeInsets.symmetric(vertical: 8),
-                                                child: Column(
-                                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                                  children: [
-                                                    Text(
-                                                      '房间号: ${room.roomNumber}',
-                                                      style: TextStyle(
-                                                        fontSize: 16,
-                                                        fontWeight: FontWeight.bold,
-                                                      ),
-                                                    ),
-                                                    SizedBox(height: 4),
-                                                    Text(
-                                                      '点击编辑',
-                                                      style: TextStyle(
-                                                        color: Colors.grey.shade600,
-                                                        fontSize: 12,
-                                                      ),
-                                                    ),
-                                                  ],
-                                                ),
-                                              ),
-                                            ),
+                                  ),
+                                  title: Text(
+                                    '房间 ${room.roomNumber}',
+                                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                      fontWeight: FontWeight.w600,
                                     ),
-                                    
-                                    // 操作按钮（右侧）
-                                    if (isEditing) ...[
-                                      // 编辑状态：保存和取消按钮
+                                  ),
+                                  subtitle: Text(
+                                    '${room.floor}楼',
+                                    style: Theme.of(context).textTheme.bodyMedium,
+                                  ),
+                                  trailing: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
                                       IconButton(
-                                        onPressed: () => _saveEdit(room),
-                                        icon: Icon(Icons.check, color: Colors.green),
-                                        tooltip: '保存',
+                                        icon: const Icon(Icons.edit, size: 20),
+                                        onPressed: () => _editRoom(room),
+                                        color: AppTheme.primaryBlue,
+                                        tooltip: '编辑',
                                       ),
                                       IconButton(
-                                        onPressed: () => _cancelEdit(room.id),
-                                        icon: Icon(Icons.close, color: Colors.orange),
-                                        tooltip: '取消',
-                                      ),
-                                    ] else ...[
-                                      // 普通状态：删除按钮
-                                      IconButton(
-                                        onPressed: () {
-                                          showDialog(
-                                            context: context,
-                                            builder: (context) => AlertDialog(
-                                              title: Text('确认删除'),
-                                              content: Text('确定要删除房间 ${room.roomNumber} 吗？'),
-                                              actions: [
-                                                TextButton(
-                                                  onPressed: () => Navigator.pop(context),
-                                                  child: Text('取消'),
-                                                ),
-                                                TextButton(
-                                                  onPressed: () {
-                                                    _deleteRoom(room);
-                                                    Navigator.pop(context);
-                                                  },
-                                                  child: Text('删除'),
-                                                  style: TextButton.styleFrom(
-                                                    foregroundColor: Colors.red,
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                          );
-                                        },
-                                        icon: Icon(Icons.delete, color: Colors.red),
+                                        icon: const Icon(Icons.delete, size: 20),
+                                        onPressed: () => _deleteRoom(room),
+                                        color: AppTheme.error,
                                         tooltip: '删除',
                                       ),
                                     ],
-                                  ],
+                                  ),
+                                  onTap: () => _editRoom(room),
                                 ),
-                              ),
-                            );
-                          },
-                        ),
-                ),
-              ],
+                              );
+                            },
+                          ),
+                  ),
+                ],
+              ),
             ),
           ),
         ],
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    _roomController.dispose();
+    _floorController.dispose();
+    super.dispose();
   }
 }

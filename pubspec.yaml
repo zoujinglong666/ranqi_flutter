@@ -27,6 +27,10 @@ dependencies:
   # 日期格式化
   intl: ^0.18.1
   
+  # 路径处理
+  path_provider: ^2.1.1
+  path: ^1.8.3
+  
   # 图标
   cupertino_icons: ^1.0.2
 

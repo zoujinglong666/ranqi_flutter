@@ -2,6 +2,8 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:path/path.dart' as path;
 import 'package:uuid/uuid.dart';
 import '../models/meter_record.dart';
 import '../models/room.dart';
@@ -28,6 +30,7 @@ class _HomeScreenState extends State<HomeScreen> {
   List<Room> _availableRooms = [];
   int? _selectedFloor;
   String? _selectedRoom;
+  String _selectedMeterType = '燃气'; // 新增：表计类型选择
 
   @override
   void initState() {
@@ -185,17 +188,29 @@ class _HomeScreenState extends State<HomeScreen> {
       return;
     }
 
-    final record = MeterRecord(
-      id: Uuid().v4(),
-      imagePath: _image!.path,
-      base64Image: _base64Image!,
-      recognitionResult: _recognitionResult!,
-      floor: floor,
-      roomNumber: roomNumber,
-      timestamp: DateTime.now(),
-    );
-
     try {
+      // 将图片复制到应用的永久存储目录
+      final appDir = await getApplicationDocumentsDirectory();
+      final imagesDir = Directory(path.join(appDir.path, 'meter_images'));
+      if (!await imagesDir.exists()) {
+        await imagesDir.create(recursive: true);
+      }
+      
+      final fileName = '${Uuid().v4()}.jpg';
+      final permanentImagePath = path.join(imagesDir.path, fileName);
+      await _image!.copy(permanentImagePath);
+
+      final record = MeterRecord(
+        id: Uuid().v4(),
+        imagePath: permanentImagePath, // 使用永久路径
+        base64Image: _base64Image!,
+        recognitionResult: _recognitionResult!,
+        floor: floor,
+        roomNumber: roomNumber,
+        timestamp: DateTime.now(),
+        meterType: _selectedMeterType,
+      );
+
       await StorageService.saveMeterRecord(record);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('记录保存成功')),
@@ -343,8 +358,9 @@ class _HomeScreenState extends State<HomeScreen> {
                       children: [
                         Text(
                           '识别结果',
-                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
+                          style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 14,
                           ),
                         ),
                         if (!_isEditingResult)
@@ -430,8 +446,9 @@ class _HomeScreenState extends State<HomeScreen> {
                           children: [
                             Text(
                               _recognitionResult!,
-                              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                fontWeight: FontWeight.bold,
+                              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.w600,
+                                fontSize: 16,
                               ),
                             ),
                             if (_recognitionResult!.contains('(手动修正)')) ...[
@@ -457,12 +474,75 @@ class _HomeScreenState extends State<HomeScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '选择楼层和房间',
+                      '表计信息',
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                     const SizedBox(height: AppTheme.spacingL),
+                    
+                    // 表计类型选择
+                    Text(
+                      '表计类型',
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: AppTheme.primaryBlue,
+                      ),
+                    ),
+                    const SizedBox(height: AppTheme.spacingM),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(horizontal: AppTheme.spacingM),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.grey.shade300),
+                        borderRadius: BorderRadius.circular(AppTheme.radiusSmall),
+                      ),
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<String>(
+                          value: _selectedMeterType,
+                          isExpanded: true,
+                          icon: Icon(Icons.arrow_drop_down, color: AppTheme.primaryBlue),
+                          items: [
+                            DropdownMenuItem(
+                              value: '燃气',
+                              child: Row(
+                                children: [
+                                  Icon(Icons.local_fire_department, color: Colors.orange, size: 20),
+                                  const SizedBox(width: AppTheme.spacingS),
+                                  Text('燃气表'),
+                                ],
+                              ),
+                            ),
+                            DropdownMenuItem(
+                              value: '水电',
+                              child: Row(
+                                children: [
+                                  Icon(Icons.water_drop, color: Colors.blue, size: 20),
+                                  const SizedBox(width: AppTheme.spacingS),
+                                  Text('水电表'),
+                                ],
+                              ),
+                            ),
+                          ],
+                          onChanged: (value) {
+                            setState(() {
+                              _selectedMeterType = value!;
+                            });
+                          },
+                        ),
+                      ),
+                    ),
+                    
+                    const SizedBox(height: AppTheme.spacingL),
+                    
+                    Text(
+                      '选择楼层和房间',
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: AppTheme.primaryBlue,
+                      ),
+                    ),
+                    const SizedBox(height: AppTheme.spacingM),
                     
                     // 从已有房间选择
                     if (_availableRooms.isNotEmpty) ...[
@@ -486,7 +566,10 @@ class _HomeScreenState extends State<HomeScreen> {
                               items: _getAvailableFloors().map((floor) {
                                 return DropdownMenuItem(
                                   value: floor,
-                                  child: Text('${floor}楼'),
+                                  child: Text(
+                                    '${floor}楼',
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
                                 );
                               }).toList(),
                               onChanged: (value) {
@@ -495,6 +578,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                   _selectedRoom = null;
                                 });
                               },
+                              isExpanded: true,
                             ),
                           ),
                           const SizedBox(width: AppTheme.spacingM),
@@ -506,10 +590,13 @@ class _HomeScreenState extends State<HomeScreen> {
                                 prefixIcon: Icons.door_front_door,
                               ),
                               items: _selectedFloor != null
-                                  ? _getRoomsForFloor(_selectedFloor!).map((room) {
+                                  ? _getRoomsForFloor(_selectedFloor!).where((room) => room != '_PLACEHOLDER_').map((room) {
                                       return DropdownMenuItem(
                                         value: room,
-                                        child: Text(room),
+                                        child: Text(
+                                          room,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
                                       );
                                     }).toList()
                                   : [],
@@ -518,6 +605,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                   _selectedRoom = value;
                                 });
                               },
+                              isExpanded: true,
                             ),
                           ),
                         ],

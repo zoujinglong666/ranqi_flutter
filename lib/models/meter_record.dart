@@ -6,6 +6,7 @@ class MeterRecord {
   final int floor;
   final String roomNumber;
   final DateTime timestamp;
+  final String meterType; // 新增：表计类型（燃气/水电）
 
   MeterRecord({
     required this.id,
@@ -15,6 +16,7 @@ class MeterRecord {
     required this.floor,
     required this.roomNumber,
     required this.timestamp,
+    required this.meterType,
   });
 
   Map<String, dynamic> toJson() {
@@ -26,6 +28,7 @@ class MeterRecord {
       'floor': floor,
       'roomNumber': roomNumber,
       'timestamp': timestamp.toIso8601String(),
+      'meterType': meterType,
     };
   }
 
@@ -38,6 +41,7 @@ class MeterRecord {
       floor: json['floor'],
       roomNumber: json['roomNumber'],
       timestamp: DateTime.parse(json['timestamp']),
+      meterType: json['meterType'] ?? '燃气', // 兼容旧数据，默认为燃气
     );
   }
 }
