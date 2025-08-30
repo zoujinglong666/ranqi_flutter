@@ -40,6 +40,13 @@ class StorageService {
     await prefs.setStringList(_roomsKey, roomStrings);
   }
 
+  // 保存单个房间
+  static Future<void> saveRoom(Room room) async {
+    final rooms = await getRooms();
+    rooms.add(room);
+    await saveRooms(rooms);
+  }
+
   // 获取所有房间
   static Future<List<Room>> getRooms() async {
     final prefs = await SharedPreferences.getInstance();

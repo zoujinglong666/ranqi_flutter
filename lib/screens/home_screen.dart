@@ -20,6 +20,7 @@ class _HomeScreenState extends State<HomeScreen> {
   File? _image;
   String? _base64Image;
   String? _recognitionResult;
+  RecognitionResult? _detailedResult; // 新增：保存详细的识别结果
   bool _isRecognizing = false;
   bool _isEditingResult = false;
   
@@ -93,10 +94,17 @@ class _HomeScreenState extends State<HomeScreen> {
     try {
       final result = await RecognitionService.recognizeMeter(_base64Image!);
       setState(() {
-        _recognitionResult = result;
+        _detailedResult = result;
+        _recognitionResult = result.displayText;
         _isEditingResult = false;
-        _extractReadingToController(result);
+        _extractReadingToController(result.displayText);
       });
+      
+      if (!result.success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(result.errorMessage ?? '识别失败')),
+        );
+      }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('识别失败: $e')),
@@ -132,6 +140,18 @@ class _HomeScreenState extends State<HomeScreen> {
       setState(() {
         _recognitionResult = '读数: $editedReading (手动修正)';
         _isEditingResult = false;
+        // 更新详细结果，标记为手动修正
+        if (_detailedResult != null) {
+          _detailedResult = RecognitionResult(
+            success: true,
+            reading: editedReading,
+            displayText: '读数: $editedReading (手动修正)',
+            requestId: _detailedResult!.requestId,
+            integerPart: _detailedResult!.integerPart,
+            decimalPart: _detailedResult!.decimalPart,
+            recognitionDetails: _detailedResult!.recognitionDetails,
+          );
+        }
       });
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -209,17 +229,52 @@ class _HomeScreenState extends State<HomeScreen> {
         roomNumber: roomNumber,
         timestamp: DateTime.now(),
         meterType: _selectedMeterType,
+        // 新增：保存详细的API响应信息
+        requestId: _detailedResult?.requestId,
+        integerPart: _detailedResult?.integerPart,
+        decimalPart: _detailedResult?.decimalPart,
+        recognitionDetails: _detailedResult?.recognitionDetails,
+        isManuallyEdited: _recognitionResult?.contains('(手动修正)') ?? false,
       );
 
       await StorageService.saveMeterRecord(record);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('记录保存成功')),
-      );
+      
+      // 如果是手动输入的楼层和房间号，自动添加到楼层管理
+      if (_floorController.text.isNotEmpty && _roomController.text.isNotEmpty) {
+        final existingRoom = _availableRooms.firstWhere(
+          (room) => room.floor == floor && room.roomNumber == roomNumber,
+          orElse: () => Room(id: '', floor: 0, roomNumber: ''),
+        );
+        
+        if (existingRoom.id.isEmpty) {
+          // 房间不存在，添加新房间
+          final newRoom = Room(
+            id: Uuid().v4(),
+            floor: floor!,
+            roomNumber: roomNumber!,
+          );
+          await StorageService.saveRoom(newRoom);
+          await _loadRooms(); // 重新加载房间列表
+          
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('记录保存成功，已自动添加房间 ${floor}楼${roomNumber}')),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('记录保存成功')),
+          );
+        }
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('记录保存成功')),
+        );
+      }
       
       setState(() {
         _image = null;
         _base64Image = null;
         _recognitionResult = null;
+        _detailedResult = null; // 清空详细结果
         _isEditingResult = false;
         _selectedFloor = null;
         _selectedRoom = null;
@@ -228,6 +283,7 @@ class _HomeScreenState extends State<HomeScreen> {
         _resultController.clear();
       });
     } catch (e) {
+      print('保存失败: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('保存失败: $e')),
       );

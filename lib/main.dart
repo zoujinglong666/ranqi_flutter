@@ -25,9 +25,11 @@ class MainScreen extends StatefulWidget {
   _MainScreenState createState() => _MainScreenState();
 }
 
-class _MainScreenState extends State<MainScreen> {
+class _MainScreenState extends State<MainScreen> with AutomaticKeepAliveClientMixin {
   int _currentIndex = 0;
+  late PageController _pageController;
   
+  // 使用IndexedStack来保持页面状态
   final List<Widget> _screens = [
     HomeScreen(),
     FloorManagementScreen(),
@@ -35,7 +37,30 @@ class _MainScreenState extends State<MainScreen> {
   ];
 
   @override
+  bool get wantKeepAlive => true;
+
+  @override
+  void initState() {
+    super.initState();
+    _pageController = PageController(initialPage: _currentIndex);
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  void _onTabTapped(int index) {
+    setState(() {
+      _currentIndex = index;
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
+    super.build(context); // 必须调用，因为使用了AutomaticKeepAliveClientMixin
+    
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(
@@ -48,7 +73,10 @@ class _MainScreenState extends State<MainScreen> {
             ],
           ),
         ),
-        child: _screens[_currentIndex],
+        child: IndexedStack(
+          index: _currentIndex,
+          children: _screens,
+        ),
       ),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
@@ -64,11 +92,7 @@ class _MainScreenState extends State<MainScreen> {
         ),
         child: BottomNavigationBar(
           currentIndex: _currentIndex,
-          onTap: (index) {
-            setState(() {
-              _currentIndex = index;
-            });
-          },
+          onTap: _onTabTapped,
           type: BottomNavigationBarType.fixed,
           backgroundColor: Colors.transparent,
           elevation: 0,

@@ -1,12 +1,13 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import '../models/meter_record.dart';
 
 class RecognitionService {
   // 阿里云燃气表识别API配置
   static const String _apiUrl = 'https://gas.market.alicloudapi.com/api/predict/gas_meter_end2end';
   static const String _appCode = '1e7ce21614824138813611e3ed70533f';
   
-  static Future<String> recognizeMeter(String base64Image) async {
+  static Future<RecognitionResult> recognizeMeter(String base64Image) async {
     try {
       final response = await http.post(
         Uri.parse(_apiUrl),
@@ -45,30 +46,81 @@ class RecognitionService {
           
           // 构建详细结果信息
           String detailInfo = '';
+          List<RecognitionDetail> details = [];
           if (retList.isNotEmpty) {
             for (var item in retList) {
               final word = item['word'] ?? '';
-              final prob = item['prob'] ?? 0.0;
+              final prob = (item['prob'] ?? 0.0).toDouble();
               final className = item['class'] ?? '';
               final confidence = (prob * 100).toStringAsFixed(1);
               detailInfo += '$className: $word (置信度: $confidence%)\n';
+              
+              details.add(RecognitionDetail(
+                word: word,
+                probability: prob,
+                className: className,
+              ));
             }
           }
           
-          return '读数: $reading\n$detailInfo';
+          return RecognitionResult(
+            success: true,
+            reading: reading,
+            displayText: '读数: $reading\n$detailInfo',
+            requestId: requestId,
+            integerPart: integer,
+            decimalPart: decimal,
+            recognitionDetails: details,
+          );
         } else {
           // API返回错误
           final errorMsg = result['message'] ?? result['error'] ?? '识别失败';
-          throw Exception('API返回错误: $errorMsg');
+          return RecognitionResult(
+            success: false,
+            reading: '识别失败',
+            displayText: 'API返回错误: $errorMsg',
+            errorMessage: errorMsg,
+          );
         }
       } else {
-        throw Exception('HTTP请求失败: ${response.statusCode} - ${response.body}');
+        return RecognitionResult(
+          success: false,
+          reading: '识别失败',
+          displayText: 'HTTP请求失败: ${response.statusCode}',
+          errorMessage: 'HTTP请求失败: ${response.statusCode} - ${response.body}',
+        );
       }
     } catch (e) {
-      // 如果是网络错误或其他异常，返回模拟数据用于测试
-      throw Exception('识别失败: $e');
+      // 如果是网络错误或其他异常，返回错误结果
+      return RecognitionResult(
+        success: false,
+        reading: '识别失败',
+        displayText: '识别失败: $e',
+        errorMessage: e.toString(),
+      );
     }
   }
-  
+}
 
+// 识别结果类
+class RecognitionResult {
+  final bool success;
+  final String reading;
+  final String displayText;
+  final String? requestId;
+  final String? integerPart;
+  final String? decimalPart;
+  final List<RecognitionDetail>? recognitionDetails;
+  final String? errorMessage;
+
+  RecognitionResult({
+    required this.success,
+    required this.reading,
+    required this.displayText,
+    this.requestId,
+    this.integerPart,
+    this.decimalPart,
+    this.recognitionDetails,
+    this.errorMessage,
+  });
 }
