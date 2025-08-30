@@ -255,20 +255,22 @@ class _FloorManagementScreenState extends State<FloorManagementScreen> with Widg
           ),
         ],
       ),
-      body: Row(
-        children: [
-          // 左侧楼层列表
-          Container(
-            width: 120,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              border: Border(
-                right: BorderSide(
-                  color: Colors.grey.shade300,
-                  width: 1,
+      body: RefreshIndicator(
+        onRefresh: _loadRooms,
+        child: Row(
+          children: [
+            // 左侧楼层列表
+            Container(
+              width: 120,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                border: Border(
+                  right: BorderSide(
+                    color: Colors.grey.shade300,
+                    width: 1,
+                  ),
                 ),
               ),
-            ),
             child: Column(
               children: [
                 Container(
@@ -385,7 +387,6 @@ class _FloorManagementScreenState extends State<FloorManagementScreen> with Widg
                             controller: _roomController,
                             decoration: AppStyles.inputDecoration(
                               labelText: '房间号',
-                              hintText: '如: 101, 102...',
                               prefixIcon: Icons.add_home,
                             ),
                             onSubmitted: (_) => _addRoom(),
@@ -396,7 +397,6 @@ class _FloorManagementScreenState extends State<FloorManagementScreen> with Widg
                           text: '添加',
                           icon: Icons.add,
                           onPressed: _addRoom,
-                          width: 100,
                         ),
                       ],
                     ),
@@ -497,6 +497,7 @@ class _FloorManagementScreenState extends State<FloorManagementScreen> with Widg
             ),
           ),
         ],
+      ),
       ),
     );
   }

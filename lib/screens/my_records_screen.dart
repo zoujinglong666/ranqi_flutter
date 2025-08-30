@@ -362,7 +362,7 @@ class _MyRecordsScreenState extends State<MyRecordsScreen> with WidgetsBindingOb
             children: [
               // 头部
               Container(
-                padding: EdgeInsets.all(20),
+                padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
@@ -370,7 +370,7 @@ class _MyRecordsScreenState extends State<MyRecordsScreen> with WidgetsBindingOb
                       _getMeterTypeColor(record.meterType).withOpacity(0.8),
                     ],
                   ),
-                  borderRadius: BorderRadius.only(
+                  borderRadius: const BorderRadius.only(
                     topLeft: Radius.circular(20),
                     topRight: Radius.circular(20),
                   ),
