@@ -8,7 +8,7 @@ class FloorManagementScreen extends StatefulWidget {
   _FloorManagementScreenState createState() => _FloorManagementScreenState();
 }
 
-class _FloorManagementScreenState extends State<FloorManagementScreen> {
+class _FloorManagementScreenState extends State<FloorManagementScreen> with WidgetsBindingObserver {
   List<Room> _rooms = [];
   int _selectedFloor = 1;
   final TextEditingController _roomController = TextEditingController();
@@ -18,6 +18,17 @@ class _FloorManagementScreenState extends State<FloorManagementScreen> {
   void initState() {
     super.initState();
     _loadRooms();
+    // 监听应用生命周期变化
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    // 当应用从后台回到前台时重新加载数据
+    if (state == AppLifecycleState.resumed) {
+      _loadRooms();
+    }
   }
 
   Future<void> _loadRooms() async {
@@ -492,6 +503,7 @@ class _FloorManagementScreenState extends State<FloorManagementScreen> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _roomController.dispose();
     _floorController.dispose();
     super.dispose();

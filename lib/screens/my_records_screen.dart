@@ -10,7 +10,7 @@ class MyRecordsScreen extends StatefulWidget {
   _MyRecordsScreenState createState() => _MyRecordsScreenState();
 }
 
-class _MyRecordsScreenState extends State<MyRecordsScreen> {
+class _MyRecordsScreenState extends State<MyRecordsScreen> with WidgetsBindingObserver {
   List<MeterRecord> _allRecords = [];
   List<MeterRecord> _filteredRecords = [];
   bool _isLoading = true;
@@ -32,6 +32,23 @@ class _MyRecordsScreenState extends State<MyRecordsScreen> {
   void initState() {
     super.initState();
     _loadRecords();
+    // 监听应用生命周期变化
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    // 当应用从后台回到前台时重新加载数据
+    if (state == AppLifecycleState.resumed) {
+      _loadRecords();
+    }
   }
 
   Future<void> _loadRecords() async {
@@ -280,62 +297,6 @@ class _MyRecordsScreenState extends State<MyRecordsScreen> {
     return readings.last - readings.first;
   }
 
-  Future<void> _addTestData() async {
-    try {
-      final testRecords = [
-        MeterRecord(
-          id: DateTime.now().millisecondsSinceEpoch.toString() + '1',
-          imagePath: '',
-          recognitionResult: '12345.67',
-          floor: 1,
-          roomNumber: '101',
-          meterType: '燃气',
-          timestamp: DateTime.now().subtract(Duration(days: 5)), base64Image: '',
-        ),
-        MeterRecord(
-          id: DateTime.now().millisecondsSinceEpoch.toString() + '2',
-          imagePath: '',
-          recognitionResult: '23456.78',
-          floor: 2,
-          roomNumber: '201',
-          meterType: '水表',
-          timestamp: DateTime.now().subtract(Duration(days: 3)), base64Image: '',
-        ),
-        MeterRecord(
-          id: DateTime.now().millisecondsSinceEpoch.toString() + '3',
-          imagePath: '',
-          recognitionResult: '34567.89',
-          floor: 1,
-          roomNumber: '102',
-          meterType: '燃气',
-          timestamp: DateTime.now().subtract(Duration(days: 1)), base64Image: '',
-        ),
-        MeterRecord(
-          id: DateTime.now().millisecondsSinceEpoch.toString() + '4',
-          imagePath: '',
-          recognitionResult: '45678.90',
-          floor: 3,
-          roomNumber: '301',
-          meterType: '水电',
-          timestamp: DateTime.now(), base64Image: '',
-        ),
-      ];
-
-      for (final record in testRecords) {
-        await StorageService.saveMeterRecord(record);
-      }
-
-      await _loadRecords();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('测试数据已添加')),
-      );
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('添加测试数据失败: $e')),
-      );
-    }
-  }
-
   Future<void> _deleteRecord(MeterRecord record) async {
     showDialog(
       context: context,
@@ -392,457 +353,448 @@ class _MyRecordsScreenState extends State<MyRecordsScreen> {
 
   // 显示记录详情弹窗
   void _showRecordDetail(MeterRecord record) {
-    showDialog(
+    showModalBottomSheet(
       context: context,
       builder: (BuildContext context) {
-        return Dialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Container(
-            constraints: BoxConstraints(
-              maxHeight: MediaQuery.of(context).size.height * 0.8,
-              maxWidth: MediaQuery.of(context).size.width * 0.9,
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // 头部
-                Container(
-                  padding: EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        _getMeterTypeColor(record.meterType),
-                        _getMeterTypeColor(record.meterType).withOpacity(0.8),
-                      ],
-                    ),
-                    borderRadius: BorderRadius.only(
-                      topLeft: Radius.circular(20),
-                      topRight: Radius.circular(20),
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        _getMeterTypeIcon(record.meterType),
-                        color: Colors.white,
-                        size: 24,
-                      ),
-                      SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          '${record.meterType} 详细信息',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
-                      IconButton(
-                        icon: Icon(Icons.close, color: Colors.white),
-                        onPressed: () => Navigator.of(context).pop(),
-                      ),
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // 头部
+              Container(
+                padding: EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      _getMeterTypeColor(record.meterType),
+                      _getMeterTypeColor(record.meterType).withOpacity(0.8),
                     ],
                   ),
+                  borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(20),
+                    topRight: Radius.circular(20),
+                  ),
                 ),
-                
-                // 内容区域
-                Flexible(
-                  child: SingleChildScrollView(
-                    padding: EdgeInsets.all(20),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // 图片展示
-                        if (record.imagePath.isNotEmpty) ...[
-                          Container(
-                            width: double.infinity,
-                            height: 200,
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(12),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.1),
-                                  blurRadius: 8,
-                                  offset: Offset(0, 4),
-                                ),
-                              ],
-                            ),
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(12),
-                              child: record.imagePath.startsWith('http')
-                                  ? Image.network(
-                                      record.imagePath,
-                                      fit: BoxFit.cover,
-                                      errorBuilder: (context, error, stackTrace) {
-                                        return Container(
-                                          color: Colors.grey.shade200,
-                                          child: Icon(
-                                            Icons.broken_image,
-                                            color: Colors.grey.shade400,
-                                            size: 60,
-                                          ),
-                                        );
-                                      },
-                                    )
-                                  : Image.file(
-                                      File(record.imagePath),
-                                      fit: BoxFit.cover,
-                                      errorBuilder: (context, error, stackTrace) {
-                                        return Container(
-                                          color: Colors.grey.shade200,
-                                          child: Icon(
-                                            Icons.image_not_supported,
-                                            color: Colors.grey.shade400,
-                                            size: 60,
-                                          ),
-                                        );
-                                      },
-                                    ),
-                            ),
-                          ),
-                          SizedBox(height: 20),
-                        ],
-                        
-                        // 识别结果
-                        _buildDetailItem(
-                          '识别结果',
-                          record.recognitionResult,
-                          Icons.speed,
-                          AppTheme.primaryBlue,
+                child: Row(
+                  children: [
+                    Icon(
+                      _getMeterTypeIcon(record.meterType),
+                      color: Colors.white,
+                      size: 24,
+                    ),
+                    SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        '${record.meterType} 详细信息',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
                         ),
-                        
-                        SizedBox(height: 16),
-                        
-                        // 新增：API响应详细信息
-                        if (record.requestId != null) ...[
-                          _buildDetailItem(
-                            '请求ID',
-                            record.requestId!,
-                            Icons.receipt_long,
-                            Colors.indigo.shade600,
-                          ),
-                          SizedBox(height: 16),
-                        ],
-                        
-                        // 读数解析详情
-                        if (record.integerPart != null || record.decimalPart != null) ...[
-                          Container(
-                            padding: EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: Colors.teal.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
-                                color: Colors.teal.withOpacity(0.3),
-                                width: 1,
+                      ),
+                    ),
+                    IconButton(
+                      icon: Icon(Icons.close, color: Colors.white),
+                      onPressed: () => Navigator.of(context).pop(),
+                    ),
+                  ],
+                ),
+              ),
+
+              // 内容区域
+              Flexible(
+                child: SingleChildScrollView(
+                  padding: EdgeInsets.all(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // 图片展示
+                      if (record.imagePath.isNotEmpty) ...[
+                        Container(
+                          width: double.infinity,
+                          height: 200,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(12),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.1),
+                                blurRadius: 8,
+                                offset: Offset(0, 4),
                               ),
+                            ],
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(12),
+                            child: record.imagePath.startsWith('http')
+                                ? Image.network(
+                                    record.imagePath,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (context, error, stackTrace) {
+                                      return Container(
+                                        color: Colors.grey.shade200,
+                                        child: Icon(
+                                          Icons.broken_image,
+                                          color: Colors.grey.shade400,
+                                          size: 60,
+                                        ),
+                                      );
+                                    },
+                                  )
+                                : Image.file(
+                                    File(record.imagePath),
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (context, error, stackTrace) {
+                                      return Container(
+                                        color: Colors.grey.shade200,
+                                        child: Icon(
+                                          Icons.image_not_supported,
+                                          color: Colors.grey.shade400,
+                                          size: 60,
+                                        ),
+                                      );
+                                    },
+                                  ),
+                          ),
+                        ),
+                        SizedBox(height: 20),
+                      ],
+
+                      // 识别结果
+                      _buildDetailItem(
+                        '识别结果',
+                        record.recognitionResult,
+                        Icons.speed,
+                        AppTheme.primaryBlue,
+                      ),
+
+                      SizedBox(height: 16),
+
+                      // 新增：API响应详细信息
+                      if (record.requestId != null) ...[
+                        _buildDetailItem(
+                          '请求ID',
+                          record.requestId!,
+                          Icons.receipt_long,
+                          Colors.indigo.shade600,
+                        ),
+                        SizedBox(height: 16),
+                      ],
+
+                      // 读数解析详情
+                      if (record.integerPart != null || record.decimalPart != null) ...[
+                        Container(
+                          padding: EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.teal.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: Colors.teal.withOpacity(0.3),
+                              width: 1,
                             ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    Container(
-                                      padding: EdgeInsets.all(8),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Container(
+                                    padding: EdgeInsets.all(8),
+                                    decoration: BoxDecoration(
+                                      color: Colors.teal,
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Icon(
+                                      Icons.analytics,
+                                      size: 20,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                  SizedBox(width: 12),
+                                  Text(
+                                    '读数解析',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.teal.shade700,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              SizedBox(height: 12),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Container(
+                                      padding: EdgeInsets.all(12),
                                       decoration: BoxDecoration(
-                                        color: Colors.teal,
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                      child: Icon(
-                                        Icons.analytics,
-                                        size: 20,
                                         color: Colors.white,
+                                        borderRadius: BorderRadius.circular(8),
+                                        border: Border.all(color: Colors.teal.shade200),
+                                      ),
+                                      child: Column(
+                                        children: [
+                                          Text(
+                                            '整数部分',
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              color: Colors.grey.shade600,
+                                            ),
+                                          ),
+                                          SizedBox(height: 4),
+                                          Text(
+                                            record.integerPart ?? '无',
+                                            style: TextStyle(
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.teal.shade700,
+                                            ),
+                                          ),
+                                        ],
                                       ),
                                     ),
-                                    SizedBox(width: 12),
+                                  ),
+                                  SizedBox(width: 12),
+                                  Expanded(
+                                    child: Container(
+                                      padding: EdgeInsets.all(12),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white,
+                                        borderRadius: BorderRadius.circular(8),
+                                        border: Border.all(color: Colors.teal.shade200),
+                                      ),
+                                      child: Column(
+                                        children: [
+                                          Text(
+                                            '小数部分',
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              color: Colors.grey.shade600,
+                                            ),
+                                          ),
+                                          SizedBox(height: 4),
+                                          Text(
+                                            record.decimalPart ?? '无',
+                                            style: TextStyle(
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.teal.shade700,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                        SizedBox(height: 16),
+                      ],
+
+                      // 手动修正标识
+                      if (record.isManuallyEdited) ...[
+                        Container(
+                          padding: EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.orange.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: Colors.orange.withOpacity(0.3),
+                              width: 1,
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              Container(
+                                padding: EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: Colors.orange,
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Icon(
+                                  Icons.edit,
+                                  size: 20,
+                                  color: Colors.white,
+                                ),
+                              ),
+                              SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
                                     Text(
-                                      '读数解析',
+                                      '手动修正',
                                       style: TextStyle(
                                         fontSize: 14,
                                         fontWeight: FontWeight.w600,
-                                        color: Colors.teal.shade700,
+                                        color: Colors.orange.shade700,
+                                      ),
+                                    ),
+                                    SizedBox(height: 4),
+                                    Text(
+                                      '此记录的识别结果已被手动修正',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.orange.shade600,
                                       ),
                                     ),
                                   ],
                                 ),
-                                SizedBox(height: 12),
-                                Row(
-                                  children: [
-                                    Expanded(
-                                      child: Container(
-                                        padding: EdgeInsets.all(12),
-                                        decoration: BoxDecoration(
-                                          color: Colors.white,
-                                          borderRadius: BorderRadius.circular(8),
-                                          border: Border.all(color: Colors.teal.shade200),
-                                        ),
-                                        child: Column(
-                                          children: [
-                                            Text(
-                                              '整数部分',
-                                              style: TextStyle(
-                                                fontSize: 12,
-                                                color: Colors.grey.shade600,
-                                              ),
-                                            ),
-                                            SizedBox(height: 4),
-                                            Text(
-                                              record.integerPart ?? '无',
-                                              style: TextStyle(
-                                                fontSize: 16,
-                                                fontWeight: FontWeight.bold,
-                                                color: Colors.teal.shade700,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-                                    SizedBox(width: 12),
-                                    Expanded(
-                                      child: Container(
-                                        padding: EdgeInsets.all(12),
-                                        decoration: BoxDecoration(
-                                          color: Colors.white,
-                                          borderRadius: BorderRadius.circular(8),
-                                          border: Border.all(color: Colors.teal.shade200),
-                                        ),
-                                        child: Column(
-                                          children: [
-                                            Text(
-                                              '小数部分',
-                                              style: TextStyle(
-                                                fontSize: 12,
-                                                color: Colors.grey.shade600,
-                                              ),
-                                            ),
-                                            SizedBox(height: 4),
-                                            Text(
-                                              record.decimalPart ?? '无',
-                                              style: TextStyle(
-                                                fontSize: 16,
-                                                fontWeight: FontWeight.bold,
-                                                color: Colors.teal.shade700,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ],
+                              ),
+                            ],
+                          ),
+                        ),
+                        SizedBox(height: 16),
+                      ],
+
+                      // 识别详情
+                      if (record.recognitionDetails != null && record.recognitionDetails!.isNotEmpty) ...[
+                        Container(
+                          padding: EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.blue.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: Colors.blue.withOpacity(0.3),
+                              width: 1,
                             ),
                           ),
-                          SizedBox(height: 16),
-                        ],
-                        
-                        // 手动修正标识
-                        if (record.isManuallyEdited) ...[
-                          Container(
-                            padding: EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: Colors.orange.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
-                                color: Colors.orange.withOpacity(0.3),
-                                width: 1,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Container(
+                                    padding: EdgeInsets.all(8),
+                                    decoration: BoxDecoration(
+                                      color: Colors.blue,
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Icon(
+                                      Icons.visibility,
+                                      size: 20,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                  SizedBox(width: 12),
+                                  Text(
+                                    '识别详情',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.blue.shade700,
+                                    ),
+                                  ),
+                                ],
                               ),
-                            ),
-                            child: Row(
-                              children: [
-                                Container(
-                                  padding: EdgeInsets.all(8),
+                              SizedBox(height: 12),
+                              ...record.recognitionDetails!.map((detail) {
+                                final confidence = (detail.probability * 100).toStringAsFixed(1);
+                                return Container(
+                                  margin: EdgeInsets.only(bottom: 8),
+                                  padding: EdgeInsets.all(12),
                                   decoration: BoxDecoration(
-                                    color: Colors.orange,
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: Icon(
-                                    Icons.edit,
-                                    size: 20,
                                     color: Colors.white,
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(color: Colors.blue.shade200),
                                   ),
-                                ),
-                                SizedBox(width: 12),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                  child: Row(
                                     children: [
-                                      Text(
-                                        '手动修正',
-                                        style: TextStyle(
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.w600,
-                                          color: Colors.orange.shade700,
+                                      Expanded(
+                                        flex: 2,
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              detail.className,
+                                              style: TextStyle(
+                                                fontSize: 12,
+                                                color: Colors.grey.shade600,
+                                              ),
+                                            ),
+                                            SizedBox(height: 2),
+                                            Text(
+                                              detail.word,
+                                              style: TextStyle(
+                                                fontSize: 14,
+                                                fontWeight: FontWeight.w600,
+                                                color: Colors.blue.shade700,
+                                              ),
+                                            ),
+                                          ],
                                         ),
                                       ),
-                                      SizedBox(height: 4),
-                                      Text(
-                                        '此记录的识别结果已被手动修正',
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          color: Colors.orange.shade600,
+                                      Container(
+                                        padding: EdgeInsets.symmetric(
+                                          horizontal: 8,
+                                          vertical: 4,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: _getConfidenceColor(detail.probability),
+                                          borderRadius: BorderRadius.circular(12),
+                                        ),
+                                        child: Text(
+                                          '${confidence}%',
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w600,
+                                            color: Colors.white,
+                                          ),
                                         ),
                                       ),
                                     ],
                                   ),
-                                ),
-                              ],
-                            ),
+                                );
+                              }).toList(),
+                            ],
                           ),
-                          SizedBox(height: 16),
-                        ],
-                        
-                        // 识别详情
-                        if (record.recognitionDetails != null && record.recognitionDetails!.isNotEmpty) ...[
-                          Container(
-                            padding: EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: Colors.blue.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
-                                color: Colors.blue.withOpacity(0.3),
-                                width: 1,
-                              ),
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    Container(
-                                      padding: EdgeInsets.all(8),
-                                      decoration: BoxDecoration(
-                                        color: Colors.blue,
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                      child: Icon(
-                                        Icons.visibility,
-                                        size: 20,
-                                        color: Colors.white,
-                                      ),
-                                    ),
-                                    SizedBox(width: 12),
-                                    Text(
-                                      '识别详情',
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w600,
-                                        color: Colors.blue.shade700,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                SizedBox(height: 12),
-                                ...record.recognitionDetails!.map((detail) {
-                                  final confidence = (detail.probability * 100).toStringAsFixed(1);
-                                  return Container(
-                                    margin: EdgeInsets.only(bottom: 8),
-                                    padding: EdgeInsets.all(12),
-                                    decoration: BoxDecoration(
-                                      color: Colors.white,
-                                      borderRadius: BorderRadius.circular(8),
-                                      border: Border.all(color: Colors.blue.shade200),
-                                    ),
-                                    child: Row(
-                                      children: [
-                                        Expanded(
-                                          flex: 2,
-                                          child: Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                            children: [
-                                              Text(
-                                                detail.className,
-                                                style: TextStyle(
-                                                  fontSize: 12,
-                                                  color: Colors.grey.shade600,
-                                                ),
-                                              ),
-                                              SizedBox(height: 2),
-                                              Text(
-                                                detail.word,
-                                                style: TextStyle(
-                                                  fontSize: 14,
-                                                  fontWeight: FontWeight.w600,
-                                                  color: Colors.blue.shade700,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                        Container(
-                                          padding: EdgeInsets.symmetric(
-                                            horizontal: 8,
-                                            vertical: 4,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: _getConfidenceColor(detail.probability),
-                                            borderRadius: BorderRadius.circular(12),
-                                          ),
-                                          child: Text(
-                                            '${confidence}%',
-                                            style: TextStyle(
-                                              fontSize: 11,
-                                              fontWeight: FontWeight.w600,
-                                              color: Colors.white,
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  );
-                                }).toList(),
-                              ],
-                            ),
-                          ),
-                          SizedBox(height: 16),
-                        ],
-                        
-                        // 位置信息
-                        _buildDetailItem(
-                          '位置',
-                          '${record.floor}楼 ${record.roomNumber}',
-                          Icons.location_on,
-                          Colors.green.shade600,
                         ),
-                        
                         SizedBox(height: 16),
-                        
-                        // 表计类型
-                        _buildDetailItem(
-                          '表计类型',
-                          record.meterType,
-                          _getMeterTypeIcon(record.meterType),
-                          _getMeterTypeColor(record.meterType),
-                        ),
-                        
-                        SizedBox(height: 16),
-                        
-                        // 记录时间
-                        _buildDetailItem(
-                          '记录时间',
-                          DateFormat('yyyy年MM月dd日 HH:mm:ss').format(record.timestamp),
-                          Icons.access_time,
-                          Colors.blue.shade600,
-                        ),
-                        
-                        SizedBox(height: 16),
-                        
-                        // ID信息
-                        _buildDetailItem(
-                          '记录ID',
-                          record.id,
-                          Icons.fingerprint,
-                          Colors.purple.shade600,
-                        ),
                       ],
-                    ),
+
+                      // 位置信息
+                      _buildDetailItem(
+                        '位置',
+                        '${record.floor}楼 ${record.roomNumber}',
+                        Icons.location_on,
+                        Colors.green.shade600,
+                      ),
+
+                      SizedBox(height: 16),
+
+                      // 表计类型
+                      _buildDetailItem(
+                        '表计类型',
+                        record.meterType,
+                        _getMeterTypeIcon(record.meterType),
+                        _getMeterTypeColor(record.meterType),
+                      ),
+
+                      SizedBox(height: 16),
+
+                      // 记录时间
+                      _buildDetailItem(
+                        '记录时间',
+                        DateFormat('yyyy年MM月dd日 HH:mm:ss').format(record.timestamp),
+                        Icons.access_time,
+                        Colors.blue.shade600,
+                      ),
+
+                      SizedBox(height: 16),
+
+                      // ID信息
+                      _buildDetailItem(
+                        '记录ID',
+                        record.id,
+                        Icons.fingerprint,
+                        Colors.purple.shade600,
+                      ),
+                    ],
                   ),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         );
       },
@@ -1178,11 +1130,7 @@ class _MyRecordsScreenState extends State<MyRecordsScreen> {
         foregroundColor: AppTheme.primaryBlue,
         elevation: 0,
         actions: [
-          IconButton(
-            icon: Icon(Icons.add_box_outlined),
-            onPressed: _addTestData,
-            tooltip: '添加测试数据',
-          ),
+
           IconButton(
             icon: Icon(Icons.refresh),
             onPressed: _loadRecords,
