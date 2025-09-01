@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'screens/home_screen.dart';
 import 'screens/floor_management_screen.dart';
 import 'screens/my_records_screen.dart';
+import 'services/migration_service.dart';
 import 'theme/app_theme.dart';
 
 void main() {
@@ -43,6 +44,22 @@ class _MainScreenState extends State<MainScreen> with AutomaticKeepAliveClientMi
   void initState() {
     super.initState();
     _pageController = PageController(initialPage: _currentIndex);
+    _performMigrationIfNeeded();
+  }
+  
+  /// 执行数据迁移（如果需要）
+  Future<void> _performMigrationIfNeeded() async {
+    try {
+      final needsMigration = await MigrationService.needsMigration();
+      if (needsMigration) {
+        print('检测到占位符房间，开始执行数据迁移...');
+        await MigrationService.migratePlaceholderRoomsToFloors();
+        print('数据迁移完成');
+      }
+    } catch (e) {
+      print('数据迁移失败: $e');
+      // 迁移失败不影响应用正常运行
+    }
   }
 
   @override

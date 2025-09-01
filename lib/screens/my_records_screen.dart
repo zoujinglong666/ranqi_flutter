@@ -121,6 +121,7 @@ class _MyRecordsScreenState extends State<MyRecordsScreen> with WidgetsBindingOb
     if (!_availableMeterTypes.contains('水电')) {
       _availableMeterTypes.add('水电');
     }
+
     _availableMeterTypes.sort();
 
     // 更新楼层选项
@@ -381,12 +382,13 @@ class _MyRecordsScreenState extends State<MyRecordsScreen> with WidgetsBindingOb
 
   // 编辑记录
   Future<void> _editRecord(MeterRecord record) async {
-    // 控制器
-    final meterTypeController = TextEditingController(text: record.meterType);
-    final roomController = TextEditingController(text: record.roomNumber);
-    
-    // 表计类型选项
-    final List<String> meterTypes = ['燃气', '水表', '水电'];
+    // 表计类型选项 - 动态获取所有可能的类型
+    final Set<String> allMeterTypes = {'燃气', '水表', '水电'}; // 基础类型
+    // 添加所有记录中的表计类型
+    for (final r in _allRecords) {
+      allMeterTypes.add(r.meterType);
+    }
+    final List<String> meterTypes = allMeterTypes.toList()..sort();
     String selectedMeterType = record.meterType;
     
     // 楼层和房间号选项
@@ -571,15 +573,18 @@ class _MyRecordsScreenState extends State<MyRecordsScreen> with WidgetsBindingOb
                           }).toList(),
                           onChanged: (int? newValue) {
                             if (newValue != null) {
-                              selectedFloor = newValue;
+                              setModalState(() {
+                                selectedFloor = newValue;
+                              });
                               updateAvailableRooms(selectedFloor).then((_) {
-                                // 重置房间选择为第一个可用房间
-                                if (availableRooms.isNotEmpty) {
-                                  selectedRoom = availableRooms.first;
-                                } else {
-                                  selectedRoom = '';
-                                }
-                                setModalState(() {});
+                                setModalState(() {
+                                  // 重置房间选择为第一个可用房间
+                                  if (availableRooms.isNotEmpty) {
+                                    selectedRoom = availableRooms.first;
+                                  } else {
+                                    selectedRoom = '';
+                                  }
+                                });
                               });
                             }
                           },
@@ -590,7 +595,7 @@ class _MyRecordsScreenState extends State<MyRecordsScreen> with WidgetsBindingOb
                     
                     // 房间号选择
                     Text(
-                      '房间号',
+                      '${selectedFloor}楼房间号',
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,

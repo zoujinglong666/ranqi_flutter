@@ -249,7 +249,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text(
+                          const Text(
                             '图片预览',
                             style: TextStyle(
                               color: Colors.white,
@@ -358,7 +358,14 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  List<int> _getAvailableFloors() {
+  Future<List<int>> _getAvailableFloors() async {
+    // 优先从 StorageService 获取所有可用楼层
+    final availableFloors = await StorageService.getAvailableFloors();
+    if (availableFloors.isNotEmpty) {
+      return availableFloors;
+    }
+    
+    // 如果没有可用楼层，从房间数据中获取
     final floors = _availableRooms.map((room) => room.floor).toSet().toList();
     floors.sort();
     return floors;
@@ -891,8 +898,19 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                     const SizedBox(height: AppTheme.spacingM),
                     
-                    // 从已有房间选择
-                    if (_availableRooms.isNotEmpty) ...[
+                    // 楼层和房间选择区域
+                    FutureBuilder<List<int>>(
+                      future: _getAvailableFloors(),
+                      builder: (context, snapshot) {
+                        final availableFloors = snapshot.data ?? [];
+                        
+                        if (availableFloors.isEmpty) {
+                          return SizedBox.shrink();
+                        }
+                        
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
                       Text(
                         '从已有房间选择',
                         style: Theme.of(context).textTheme.titleSmall?.copyWith(
@@ -910,7 +928,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 labelText: '楼层',
                                 prefixIcon: Icons.layers,
                               ),
-                              items: _getAvailableFloors().map((floor) {
+                              items: availableFloors.map((floor) {
                                 return DropdownMenuItem(
                                   value: floor,
                                   child: Text(
@@ -937,7 +955,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 prefixIcon: Icons.door_front_door,
                               ),
                               items: _selectedFloor != null
-                                  ? _getRoomsForFloor(_selectedFloor!).where((room) => room != '_PLACEHOLDER_').map((room) {
+                                  ? _getRoomsForFloor(_selectedFloor!).map((room) {
                                       return DropdownMenuItem(
                                         value: room,
                                         child: Text(
@@ -963,7 +981,10 @@ class _HomeScreenState extends State<HomeScreen> {
                       const Divider(),
                       
                       const SizedBox(height: AppTheme.spacingL),
-                    ],
+                          ],
+                        );
+                      },
+                    ),
                     
                     // 手动输入
                     Text(

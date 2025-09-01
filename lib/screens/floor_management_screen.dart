@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import '../models/room.dart';
+import '../models/floor.dart';
 import '../services/storage_service.dart';
 import '../services/event_manager.dart';
 import '../theme/app_theme.dart';
@@ -51,10 +52,9 @@ class _FloorManagementScreenState extends State<FloorManagementScreen> with Widg
     });
   }
 
-  List<int> _getAvailableFloors() {
-    final floors = _rooms.map((room) => room.floor).toSet().toList();
-    floors.sort();
-    if (floors.isEmpty) floors.add(1);
+  Future<List<int>> _getAvailableFloors() async {
+    final floors = await StorageService.getAvailableFloors();
+    if (floors.isEmpty) return [1];
     return floors;
   }
 
@@ -696,17 +696,16 @@ class _FloorManagementScreenState extends State<FloorManagementScreen> with Widg
     );
 
     if (floorNumber != null && floorNumber > 0) {
-      final floors = _getAvailableFloors();
-      if (!floors.contains(floorNumber)) {
-        // 创建一个占位房间来确保楼层被保存和显示
-        final placeholderRoom = Room(
-          id: 'floor_${floorNumber}_placeholder_${DateTime.now().millisecondsSinceEpoch}',
-          floor: floorNumber,
-          roomNumber: '_PLACEHOLDER_', // 使用特殊标记作为占位符
+      final availableFloors = await StorageService.getAvailableFloors();
+      if (!availableFloors.contains(floorNumber)) {
+        // 使用新的楼层管理系统
+        final newFloor = Floor(
+          floorNumber: floorNumber,
+          createdAt: DateTime.now(),
+          description: '手动添加的楼层',
         );
         
-        _rooms.add(placeholderRoom);
-        await StorageService.saveRooms(_rooms);
+        await StorageService.saveFloor(newFloor);
         
         setState(() {
           _selectedFloor = floorNumber;
@@ -770,13 +769,16 @@ class _FloorManagementScreenState extends State<FloorManagementScreen> with Widg
     );
 
     if (confirmed == true) {
-      // 删除该楼层的所有房间（包括占位符）
+      // 删除该楼层的所有房间
       _rooms.removeWhere((room) => room.floor == floor);
       await StorageService.saveRooms(_rooms);
       
+      // 删除楼层记录
+      await StorageService.deleteFloor(floor);
+      
       // 如果删除的是当前选中的楼层，切换到其他楼层
       if (_selectedFloor == floor) {
-        final remainingFloors = _getAvailableFloors();
+        final remainingFloors = await _getAvailableFloors();
         if (remainingFloors.isNotEmpty) {
           setState(() {
             _selectedFloor = remainingFloors.first;
@@ -801,7 +803,6 @@ class _FloorManagementScreenState extends State<FloorManagementScreen> with Widg
 
   @override
   Widget build(BuildContext context) {
-    final floors = _getAvailableFloors();
     final currentFloorRooms = _getRoomsForFloor(_selectedFloor);
 
     return Scaffold(
@@ -833,7 +834,7 @@ class _FloorManagementScreenState extends State<FloorManagementScreen> with Widg
                   ),
                 ),
               ),
-            child: Column(
+              child: Column(
               children: [
                 Container(
                   width: double.infinity,
@@ -857,10 +858,32 @@ class _FloorManagementScreenState extends State<FloorManagementScreen> with Widg
                   ),
                 ),
                 Expanded(
-                  child: ListView.builder(
-                    itemCount: floors.length,
-                    itemBuilder: (context, index) {
-                      final floor = floors[index];
+                  child: FutureBuilder<List<int>>(
+                    future: _getAvailableFloors(),
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return Center(
+                          child: CircularProgressIndicator(
+                            color: AppTheme.primaryBlue,
+                          ),
+                        );
+                      }
+                      
+                      if (snapshot.hasError) {
+                        return Center(
+                          child: Text(
+                            '加载失败',
+                            style: TextStyle(color: Colors.grey.shade600),
+                          ),
+                        );
+                      }
+                      
+                      final floors = snapshot.data ?? [1];
+                      
+                      return ListView.builder(
+                        itemCount: floors.length,
+                        itemBuilder: (context, index) {
+                          final floor = floors[index];
                       final isSelected = floor == _selectedFloor;
                       
                       return Container(
@@ -898,9 +921,13 @@ class _FloorManagementScreenState extends State<FloorManagementScreen> with Widg
                           ),
                         ),
                       );
+                        },
+                      );
                     },
                   ),
-                ),
+                  ),
+
+
               ],
             ),
           ),
@@ -1062,9 +1089,10 @@ class _FloorManagementScreenState extends State<FloorManagementScreen> with Widg
             ),
           ),
         ],
-      ),
-      ),
+    ),
+    ),
     );
+
   }
 
   /// 订阅事件

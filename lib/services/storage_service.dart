@@ -2,10 +2,12 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/meter_record.dart';
 import '../models/room.dart';
+import '../models/floor.dart';
 
 class StorageService {
   static const String _recordsKey = 'meter_records';
   static const String _roomsKey = 'rooms';
+  static const String _floorsKey = 'floors';
 
   // 保存表记录
   static Future<void> saveMeterRecord(MeterRecord record) async {
@@ -75,5 +77,62 @@ class StorageService {
   static Future<List<Room>> getRoomsByFloor(int floor) async {
     final rooms = await getRooms();
     return rooms.where((room) => room.floor == floor).toList();
+  }
+
+  // ========== 楼层管理方法 ==========
+  
+  // 保存所有楼层
+  static Future<void> saveFloors(List<Floor> floors) async {
+    final prefs = await SharedPreferences.getInstance();
+    List<String> floorStrings = floors.map((floor) => jsonEncode(floor.toJson())).toList();
+    await prefs.setStringList(_floorsKey, floorStrings);
+  }
+
+  // 保存单个楼层
+  static Future<void> saveFloor(Floor floor) async {
+    final floors = await getFloors();
+    // 检查楼层是否已存在
+    if (!floors.any((f) => f.floorNumber == floor.floorNumber)) {
+      floors.add(floor);
+      await saveFloors(floors);
+    }
+  }
+
+  // 获取所有楼层
+  static Future<List<Floor>> getFloors() async {
+    final prefs = await SharedPreferences.getInstance();
+    List<String> floorStrings = prefs.getStringList(_floorsKey) ?? [];
+    final floors = floorStrings.map((floor) => Floor.fromJson(jsonDecode(floor))).toList();
+    floors.sort((a, b) => a.floorNumber.compareTo(b.floorNumber));
+    return floors;
+  }
+
+  // 删除楼层
+  static Future<void> deleteFloor(int floorNumber) async {
+    final floors = await getFloors();
+    floors.removeWhere((floor) => floor.floorNumber == floorNumber);
+    await saveFloors(floors);
+  }
+
+  // 获取可用楼层号列表（包含从房间和记录中推断的楼层）
+  static Future<List<int>> getAvailableFloors() async {
+    final floors = await getFloors();
+    final rooms = await getRooms();
+    final records = await getMeterRecords();
+    
+    final Set<int> allFloors = {};
+    
+    // 添加显式定义的楼层
+    allFloors.addAll(floors.map((f) => f.floorNumber));
+    
+    // 添加从房间推断的楼层
+    allFloors.addAll(rooms.map((r) => r.floor));
+    
+    // 添加从记录推断的楼层
+    allFloors.addAll(records.map((r) => r.floor));
+    
+    final result = allFloors.toList();
+    result.sort();
+    return result;
   }
 }
