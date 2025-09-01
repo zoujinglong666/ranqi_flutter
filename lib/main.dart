@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'screens/home_screen.dart';
 import 'screens/floor_management_screen.dart';
 import 'screens/my_records_screen.dart';
+import 'screens/management_screen.dart';
 import 'services/migration_service.dart';
 import 'theme/app_theme.dart';
 
@@ -35,6 +36,7 @@ class _MainScreenState extends State<MainScreen> with AutomaticKeepAliveClientMi
     HomeScreen(),
     FloorManagementScreen(),
     MyRecordsScreen(),
+    ManagementScreen(),
   ];
 
   @override
@@ -138,6 +140,11 @@ class _MainScreenState extends State<MainScreen> with AutomaticKeepAliveClientMi
               icon: Icon(Icons.history_outlined),
               activeIcon: Icon(Icons.history),
               label: '记录',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.settings_outlined),
+              activeIcon: Icon(Icons.settings),
+              label: '管理',
             ),
           ],
         ),

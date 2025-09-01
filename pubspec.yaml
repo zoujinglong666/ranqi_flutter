@@ -31,6 +31,9 @@ dependencies:
   path_provider: ^2.1.1
   path: ^1.8.3
   
+  # 文件分享
+  share_plus: ^7.2.1
+  
   # 图标
   cupertino_icons: ^1.0.2
 
