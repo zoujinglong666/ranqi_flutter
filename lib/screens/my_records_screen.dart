@@ -118,8 +118,8 @@ class _MyRecordsScreenState extends State<MyRecordsScreen> with WidgetsBindingOb
     if (!_availableMeterTypes.contains('水表')) {
       _availableMeterTypes.add('水表');
     }
-    if (!_availableMeterTypes.contains('水电')) {
-      _availableMeterTypes.add('水电');
+    if (!_availableMeterTypes.contains('电表')) {
+      _availableMeterTypes.add('电表');
     }
 
     _availableMeterTypes.sort();
@@ -288,7 +288,7 @@ class _MyRecordsScreenState extends State<MyRecordsScreen> with WidgetsBindingOb
         return Colors.orange.shade100;
       case '水表':
         return Colors.cyan.shade100;
-      case '水电':
+      case '电表':
         return Colors.blue.shade100;
       default:
         return Colors.grey.shade100;

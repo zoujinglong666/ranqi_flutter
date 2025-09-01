@@ -6,7 +6,7 @@ class MeterRecord {
   final int floor;
   final String roomNumber;
   final DateTime timestamp;
-  final String meterType; // 表计类型（燃气/水电）
+  final String meterType; // 表计类型（燃气/水/电）
   
   // 新增：详细API响应信息
   final String? requestId; // API请求ID
