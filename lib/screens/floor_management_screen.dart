@@ -807,9 +807,17 @@ class _FloorManagementScreenState extends State<FloorManagementScreen> with Widg
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('楼层管理'),
-        backgroundColor: Colors.white,
+        title: Text(
+          '楼层管理',
+          style: TextStyle(
+            fontSize: AppTheme.fontSizeTitle,
+            fontWeight: FontWeight.w600,
+            color: Colors.white,
+          ),
+        ),
+        backgroundColor: AppTheme.primaryBlue,
         elevation: 0,
+        iconTheme: IconThemeData(color: Colors.white),
         actions: [
           IconButton(
             icon: const Icon(Icons.add_home),

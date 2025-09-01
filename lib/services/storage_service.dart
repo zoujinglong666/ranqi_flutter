@@ -6,6 +6,7 @@ import '../models/floor.dart';
 import '../models/rent_record.dart';
 import '../models/unit_price.dart';
 import '../models/service_fee.dart';
+import '../models/rent_config.dart';
 
 class StorageService {
   static const String _recordsKey = 'meter_records';
@@ -14,6 +15,7 @@ class StorageService {
   static const String _rentRecordsKey = 'rent_records';
   static const String _unitPricesKey = 'unit_prices';
   static const String _serviceFeesKey = 'service_fees';
+  static const String _rentConfigsKey = 'rent_configs';
 
   // 保存表记录
   static Future<void> saveMeterRecord(MeterRecord record) async {
@@ -324,5 +326,83 @@ class StorageService {
   static Future<List<ServiceFee>> getServiceFeesByType(String feeType) async {
     final allFees = await getServiceFees();
     return allFees.where((fee) => fee.feeType == feeType).toList();
+  }
+
+  // ==================== 租金配置相关方法 ====================
+  
+  // 保存租金配置
+  static Future<void> saveRentConfig(RentConfig config) async {
+    final prefs = await SharedPreferences.getInstance();
+    List<String> configs = prefs.getStringList(_rentConfigsKey) ?? [];
+    configs.add(jsonEncode(config.toJson()));
+    await prefs.setStringList(_rentConfigsKey, configs);
+  }
+
+  // 获取所有租金配置
+  static Future<List<RentConfig>> getRentConfigs() async {
+    final prefs = await SharedPreferences.getInstance();
+    List<String> configs = prefs.getStringList(_rentConfigsKey) ?? [];
+    return configs.map((config) => RentConfig.fromJson(jsonDecode(config))).toList();
+  }
+
+  // 更新租金配置
+  static Future<void> updateRentConfig(RentConfig updatedConfig) async {
+    final prefs = await SharedPreferences.getInstance();
+    List<String> configs = prefs.getStringList(_rentConfigsKey) ?? [];
+    
+    for (int i = 0; i < configs.length; i++) {
+      final decoded = jsonDecode(configs[i]);
+      if (decoded['id'] == updatedConfig.id) {
+        configs[i] = jsonEncode(updatedConfig.toJson());
+        break;
+      }
+    }
+    
+    await prefs.setStringList(_rentConfigsKey, configs);
+  }
+
+  // 删除租金配置
+  static Future<void> deleteRentConfig(String id) async {
+    final prefs = await SharedPreferences.getInstance();
+    List<String> configs = prefs.getStringList(_rentConfigsKey) ?? [];
+    configs.removeWhere((config) {
+      final decoded = jsonDecode(config);
+      return decoded['id'] == id;
+    });
+    await prefs.setStringList(_rentConfigsKey, configs);
+  }
+
+  // 获取指定房间的有效租金配置
+  static Future<List<RentConfig>> getRentConfigsByRoom(int floor, String roomNumber) async {
+    final allConfigs = await getRentConfigs();
+    return allConfigs.where((config) => 
+      config.floor == floor && 
+      config.roomNumber == roomNumber &&
+      config.isActive
+    ).toList()..sort((a, b) => b.startDate.compareTo(a.startDate)); // 按开始日期倒序排列
+  }
+
+  // 获取指定房间在指定月份的租金配置
+  static Future<RentConfig?> getRentConfigForMonth(int floor, String roomNumber, DateTime month) async {
+    final configs = await getRentConfigsByRoom(floor, roomNumber);
+    
+    for (final config in configs) {
+      if (config.isValidForMonth(month)) {
+        return config;
+      }
+    }
+    
+    return null;
+  }
+
+  // 停用租金配置（设置结束日期）
+  static Future<void> deactivateRentConfig(String id, DateTime endDate) async {
+    final configs = await getRentConfigs();
+    final config = configs.firstWhere((c) => c.id == id);
+    final updatedConfig = config.copyWith(
+      endDate: endDate,
+      updatedAt: DateTime.now(),
+    );
+    await updateRentConfig(updatedConfig);
   }
 }

@@ -10,10 +10,17 @@ class ManagementScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('管理中心'),
+        title: Text(
+          '管理中心',
+          style: TextStyle(
+            fontSize: AppTheme.fontSizeTitle,
+            fontWeight: FontWeight.w600,
+            color: Colors.white,
+          ),
+        ),
         backgroundColor: AppTheme.primaryBlue,
-        foregroundColor: Colors.white,
         elevation: 0,
+        iconTheme: IconThemeData(color: Colors.white),
       ),
       body: Container(
         decoration: const BoxDecoration(

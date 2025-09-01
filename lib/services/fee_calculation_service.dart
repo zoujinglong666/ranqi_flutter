@@ -1,6 +1,7 @@
 import '../models/meter_record.dart';
 import '../models/unit_price.dart';
 import '../models/rent_record.dart';
+import '../models/rent_config.dart';
 import '../models/service_fee.dart';
 import 'storage_service.dart';
 
@@ -33,16 +34,32 @@ class FeeCalculationService {
       final electricFee = await _calculateMeterFee(electricRecords, '电表', year, month);
       final gasFee = await _calculateMeterFee(gasRecords, '燃气表', year, month);
 
-      // 获取租金
-      final rentRecords = await StorageService.getRentRecords();
-      final rentRecord = rentRecords.where((r) => 
-        r.floor == floor && 
-        r.roomNumber == roomNumber &&
-        r.month.year == year &&
-        r.month.month == month
+      // 获取租金 - 优先使用租金配置，其次使用租金记录
+      double rent = 0.0;
+      
+      // 首先尝试从租金配置获取
+      final rentConfigs = await StorageService.getRentConfigs();
+      final targetDate = DateTime(year, month);
+      final validConfig = rentConfigs.where((config) => 
+        config.floor == floor && 
+        config.roomNumber == roomNumber &&
+        config.isValidForMonth(targetDate)
       ).firstOrNull;
-
-      final rent = rentRecord?.rentAmount ?? 0.0;
+      
+      if (validConfig != null) {
+        rent = validConfig.rentAmount;
+      } else {
+        // 如果没有配置，则使用租金记录
+        final rentRecords = await StorageService.getRentRecords();
+        final rentRecord = rentRecords.where((r) => 
+          r.floor == floor && 
+          r.roomNumber == roomNumber &&
+          r.month.year == year &&
+          r.month.month == month
+        ).firstOrNull;
+        
+        rent = rentRecord?.rentAmount ?? 0.0;
+      }
 
       // 获取服务费
       final serviceFees = await StorageService.getServiceFeesByRoomAndMonth(

@@ -273,11 +273,18 @@ class _MyRecordsScreenState extends State<MyRecordsScreen> with WidgetsBindingOb
           : AppTheme.primaryBlue.withOpacity(0.1),
       labelStyle: TextStyle(
         color: isSelected ? Colors.white : AppTheme.primaryBlue,
-        fontSize: 12,
-        fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+        fontSize: AppTheme.fontSizeCaption,
+        fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
       ),
-      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: EdgeInsets.symmetric(horizontal: AppTheme.spacingM, vertical: AppTheme.spacingS),
       elevation: isSelected ? 2 : 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+        side: BorderSide(
+          color: isSelected ? AppTheme.primaryBlue : AppTheme.primaryBlue.withOpacity(0.3),
+          width: 1,
+        ),
+      ),
     );
   }
 
@@ -1339,10 +1346,35 @@ class _MyRecordsScreenState extends State<MyRecordsScreen> with WidgetsBindingOb
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // 筛选选项
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
+                  Container(
+                    padding: EdgeInsets.all(AppTheme.spacingM),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.05),
+                          blurRadius: 8,
+                          offset: Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '筛选条件',
+                          style: TextStyle(
+                            fontSize: AppTheme.fontSizeSubtitle,
+                            fontWeight: FontWeight.w600,
+                            color: AppTheme.textPrimary,
+                          ),
+                        ),
+                        SizedBox(height: AppTheme.spacingM),
+                        Wrap(
+                          spacing: AppTheme.spacingM,
+                          runSpacing: AppTheme.spacingM,
+                          children: [
                       // 表计类型筛选
                       _buildFilterDropdown(
                         label: '表计类型',
@@ -1373,9 +1405,10 @@ class _MyRecordsScreenState extends State<MyRecordsScreen> with WidgetsBindingOb
                       
                       // 房间筛选
                       _buildFilterDropdown(
-                        label: '房间号',
+                        label: _selectedFloor == null ? '房间号（请先选择楼层）' : '房间号',
                         value: _selectedRoom,
                         items: _availableRooms,
+                        enabled: _selectedFloor != null && _availableRooms.isNotEmpty,
                         onChanged: (value) {
                           setState(() {
                             _selectedRoom = value;
@@ -1397,50 +1430,57 @@ class _MyRecordsScreenState extends State<MyRecordsScreen> with WidgetsBindingOb
                           _applyFilters();
                         },
                       ),
-                    ],
-                  ),
-                  
-                  SizedBox(height: 12),
-                  
-                  // 月份快捷选项
-                  Text(
-                    '快捷选择',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.grey.shade700,
-                    ),
-                  ),
-                  SizedBox(height: 8),
-                  Wrap(
-                    spacing: 8,
-                    children: [
-                      _buildQuickFilterChip('近三月', () => _selectRecentMonths(3)),
-                      _buildQuickFilterChip('近半年', () => _selectRecentMonths(6)),
-                      _buildQuickFilterChip('本月', () => _selectCurrentMonth()),
-                      _buildQuickFilterChip('上月', () => _selectLastMonth()),
-                    ],
-                  ),
-                  
-                  SizedBox(height: 12),
-                  
-                  // 操作按钮
-                  Row(
-                    children: [
-                      if (_selectedMeterType != null || _selectedFloor != null || 
-                          _selectedRoom != null || _selectedMonth != null)
-                        Expanded(
-                          child: OutlinedButton.icon(
-                            onPressed: _clearFilters,
-                            icon: Icon(Icons.clear, size: 16),
-                            label: Text('清除筛选'),
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: Colors.red.shade700,
-                              side: BorderSide(color: Colors.red.shade300),
-                            ),
+                          ],
+                        ),
+                        
+                        SizedBox(height: AppTheme.spacingM),
+                        
+                        // 月份快捷选项
+                        Text(
+                          '快捷选择',
+                          style: TextStyle(
+                            fontSize: AppTheme.fontSizeCaption,
+                            fontWeight: FontWeight.w600,
+                            color: AppTheme.textSecondary,
                           ),
                         ),
-                    ],
+                        SizedBox(height: AppTheme.spacingS),
+                        Wrap(
+                          spacing: AppTheme.spacingS,
+                          children: [
+                            _buildQuickFilterChip('近三月', () => _selectRecentMonths(3)),
+                            _buildQuickFilterChip('近半年', () => _selectRecentMonths(6)),
+                            _buildQuickFilterChip('本月', () => _selectCurrentMonth()),
+                            _buildQuickFilterChip('上月', () => _selectLastMonth()),
+                          ],
+                        ),
+                        
+                        if (_selectedMeterType != null || _selectedFloor != null || 
+                            _selectedRoom != null || _selectedMonth != null) ...[
+                          SizedBox(height: AppTheme.spacingM),
+                          
+                          // 操作按钮
+                          Row(
+                            children: [
+                              Expanded(
+                                child: OutlinedButton.icon(
+                                  onPressed: _clearFilters,
+                                  icon: Icon(Icons.clear, size: 16),
+                                  label: Text('清除筛选'),
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor: Colors.red.shade600,
+                                    side: BorderSide(color: Colors.red.shade300),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ],
+                    ),
                   ),
                 ],
               ),
@@ -1491,6 +1531,7 @@ class _MyRecordsScreenState extends State<MyRecordsScreen> with WidgetsBindingOb
     required String? value,
     required List<String> items,
     required Function(String?) onChanged,
+    bool enabled = true,
   }) {
     return Container(
       constraints: BoxConstraints(minWidth: 120),
@@ -1498,19 +1539,48 @@ class _MyRecordsScreenState extends State<MyRecordsScreen> with WidgetsBindingOb
         decoration: InputDecoration(
           labelText: label,
           border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+            borderSide: BorderSide(color: Colors.grey.shade300),
           ),
-          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+            borderSide: BorderSide(color: Colors.grey.shade300),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+            borderSide: BorderSide(color: AppTheme.primaryBlue, width: 2),
+          ),
+          disabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+            borderSide: BorderSide(color: Colors.grey.shade200),
+          ),
+          contentPadding: EdgeInsets.symmetric(horizontal: AppTheme.spacingM, vertical: AppTheme.spacingS),
+          filled: true,
+          fillColor: enabled ? Colors.white : Colors.grey.shade50,
+          labelStyle: TextStyle(
+            color: enabled ? AppTheme.textSecondary : Colors.grey.shade400,
+            fontSize: AppTheme.fontSizeCaption,
+          ),
         ),
         value: value,
         items: items.map((item) {
           return DropdownMenuItem<String>(
             value: item,
-            child: Text(item, style: TextStyle(fontSize: 14)),
+            child: Text(
+              item, 
+              style: TextStyle(
+                fontSize: AppTheme.fontSizeBody,
+                color: enabled ? AppTheme.textPrimary : Colors.grey.shade400,
+              ),
+            ),
           );
         }).toList(),
-        onChanged: onChanged,
+        onChanged: enabled ? onChanged : null,
         isExpanded: true,
+        icon: Icon(
+          Icons.keyboard_arrow_down,
+          color: enabled ? AppTheme.textSecondary : Colors.grey.shade400,
+        ),
       ),
     );
   }
@@ -1520,12 +1590,18 @@ class _MyRecordsScreenState extends State<MyRecordsScreen> with WidgetsBindingOb
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
       appBar: AppBar(
-        title: Text('我的记录'),
-        backgroundColor: Colors.white,
-        foregroundColor: AppTheme.primaryBlue,
+        title: Text(
+          '我的记录',
+          style: TextStyle(
+            fontSize: AppTheme.fontSizeTitle,
+            fontWeight: FontWeight.w600,
+            color: Colors.white,
+          ),
+        ),
+        backgroundColor: AppTheme.primaryBlue,
         elevation: 0,
+        iconTheme: IconThemeData(color: Colors.white),
         actions: [
-
           IconButton(
             icon: Icon(Icons.refresh),
             onPressed: _loadRecords,
