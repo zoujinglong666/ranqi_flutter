@@ -1,7 +1,9 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../services/fee_calculation_service.dart';
 import '../services/storage_service.dart';
 import '../services/export_service.dart';
+import '../services/event_manager.dart';
 import '../theme/app_theme.dart';
 
 class MonthlyReportScreen extends StatefulWidget {
@@ -20,12 +22,51 @@ class _MonthlyReportScreenState extends State<MonthlyReportScreen> {
   int _selectedMonth = DateTime.now().month;
   String? _selectedFloor;
   List<String> _availableFloors = [];
+  
+  // 事件订阅
+  StreamSubscription<EventData>? _eventSubscription;
 
   @override
   void initState() {
     super.initState();
     _loadAvailableFloors();
     _generateReport();
+    _subscribeToEvents();
+  }
+  
+  @override
+  void dispose() {
+    _eventSubscription?.cancel();
+    super.dispose();
+  }
+  
+  /// 订阅租金相关事件
+  void _subscribeToEvents() {
+    _eventSubscription = eventManager.subscribe(
+      EventType.recordAdded,
+      (eventData) {
+        // 当有租金配置或记录变化时，重新生成报表
+        if (mounted && eventData.data != null) {
+          final type = eventData.data!['type'] as String?;
+          if (type == 'rent_config' || type == 'rent_record') {
+            _generateReport();
+          }
+        }
+      },
+    );
+    
+    // 同时监听更新事件
+    eventManager.subscribe(
+      EventType.recordUpdated,
+      (eventData) {
+        if (mounted && eventData.data != null) {
+          final type = eventData.data!['type'] as String?;
+          if (type == 'rent_config' || type == 'rent_record') {
+            _generateReport();
+          }
+        }
+      },
+    );
   }
 
   Future<void> _loadAvailableFloors() async {
@@ -713,7 +754,7 @@ class _MonthlyReportScreenState extends State<MonthlyReportScreen> {
               SizedBox(height: AppTheme.spacingM),
               
               // 单个房间导出
-              Text(
+              const Text(
                 '单个房间',
                 style: TextStyle(
                   fontSize: AppTheme.fontSizeBody,
@@ -722,7 +763,6 @@ class _MonthlyReportScreenState extends State<MonthlyReportScreen> {
                 ),
               ),
               SizedBox(height: AppTheme.spacingS),
-              
               Container(
                 height: 200,
                 decoration: BoxDecoration(

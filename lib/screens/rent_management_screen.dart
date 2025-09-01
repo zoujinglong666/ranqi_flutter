@@ -385,8 +385,18 @@ class _RentManagementScreenState extends State<RentManagementScreen> {
                               
                               if (existingConfig != null) {
                                 await StorageService.updateRentConfig(config);
+                                eventManager.publish(EventType.recordUpdated, data: {
+                                  'type': 'rent_config',
+                                  'floor': config.floor,
+                                  'roomNumber': config.roomNumber,
+                                });
                               } else {
                                 await StorageService.saveRentConfig(config);
+                                eventManager.publish(EventType.recordAdded, data: {
+                                  'type': 'rent_config',
+                                  'floor': config.floor,
+                                  'roomNumber': config.roomNumber,
+                                });
                               }
                               
                               Navigator.of(context).pop();
@@ -610,8 +620,20 @@ class _RentManagementScreenState extends State<RentManagementScreen> {
                           
                           if (existingRecord != null) {
                             await StorageService.updateRentRecord(record);
+                            eventManager.publish(EventType.recordUpdated, data: {
+                              'type': 'rent_record',
+                              'floor': record.floor,
+                              'roomNumber': record.roomNumber,
+                              'month': record.month,
+                            });
                           } else {
                             await StorageService.saveRentRecord(record);
+                            eventManager.publish(EventType.recordAdded, data: {
+                              'type': 'rent_record',
+                              'floor': record.floor,
+                              'roomNumber': record.roomNumber,
+                              'month': record.month,
+                            });
                           }
                           
                           Navigator.of(context).pop();
