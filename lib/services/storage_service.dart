@@ -33,6 +33,23 @@ class StorageService {
     await prefs.setStringList(_recordsKey, records);
   }
 
+  // 更新表记录
+  static Future<void> updateMeterRecord(MeterRecord updatedRecord) async {
+    final prefs = await SharedPreferences.getInstance();
+    List<String> records = prefs.getStringList(_recordsKey) ?? [];
+    
+    // 找到并替换对应的记录
+    for (int i = 0; i < records.length; i++) {
+      final decoded = jsonDecode(records[i]);
+      if (decoded['id'] == updatedRecord.id) {
+        records[i] = jsonEncode(updatedRecord.toJson());
+        break;
+      }
+    }
+    
+    await prefs.setStringList(_recordsKey, records);
+  }
+
   // 保存房间信息
   static Future<void> saveRooms(List<Room> rooms) async {
     final prefs = await SharedPreferences.getInstance();

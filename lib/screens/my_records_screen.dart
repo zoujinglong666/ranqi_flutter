@@ -379,6 +379,254 @@ class _MyRecordsScreenState extends State<MyRecordsScreen> with WidgetsBindingOb
     }
   }
 
+  // 编辑记录
+  Future<void> _editRecord(MeterRecord record) async {
+    // 控制器
+    final meterTypeController = TextEditingController(text: record.meterType);
+    final floorController = TextEditingController(text: record.floor.toString());
+    final roomController = TextEditingController(text: record.roomNumber);
+    
+    // 表计类型选项
+    final List<String> meterTypes = ['燃气', '水表', '水电'];
+    String selectedMeterType = record.meterType;
+    
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (BuildContext context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return Padding(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(context).viewInsets.bottom,
+              ),
+              child: Container(
+                padding: EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(20),
+                    topRight: Radius.circular(20),
+                  ),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // 标题
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.edit,
+                          color: AppTheme.primaryBlue,
+                          size: 24,
+                        ),
+                        SizedBox(width: 12),
+                        Text(
+                          '编辑记录',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: AppTheme.primaryBlue,
+                          ),
+                        ),
+                        Spacer(),
+                        IconButton(
+                          icon: Icon(Icons.close),
+                          onPressed: () => Navigator.of(context).pop(),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 20),
+                    
+                    // 表计类型选择
+                    Text(
+                      '表计类型',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.grey.shade700,
+                      ),
+                    ),
+                    SizedBox(height: 8),
+                    Container(
+                      padding: EdgeInsets.symmetric(horizontal: 12),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.grey.shade300),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<String>(
+                          value: selectedMeterType,
+                          isExpanded: true,
+                          items: meterTypes.map((String type) {
+                            return DropdownMenuItem<String>(
+                              value: type,
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    _getMeterTypeIcon(type),
+                                    color: _getMeterTypeTextColor(type),
+                                    size: 20,
+                                  ),
+                                  SizedBox(width: 8),
+                                  Text(type),
+                                ],
+                              ),
+                            );
+                          }).toList(),
+                          onChanged: (String? newValue) {
+                            if (newValue != null) {
+                              setState(() {
+                                selectedMeterType = newValue;
+                              });
+                            }
+                          },
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: 16),
+                    
+                    // 楼层输入
+                    Text(
+                      '楼层',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.grey.shade700,
+                      ),
+                    ),
+                    SizedBox(height: 8),
+                    TextField(
+                      controller: floorController,
+                      keyboardType: TextInputType.number,
+                      decoration: InputDecoration(
+                        hintText: '请输入楼层',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        prefixIcon: Icon(Icons.layers),
+                      ),
+                    ),
+                    SizedBox(height: 16),
+                    
+                    // 房间号输入
+                    Text(
+                      '房间号',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.grey.shade700,
+                      ),
+                    ),
+                    SizedBox(height: 8),
+                    TextField(
+                      controller: roomController,
+                      decoration: InputDecoration(
+                        hintText: '请输入房间号',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        prefixIcon: Icon(Icons.room),
+                      ),
+                    ),
+                    SizedBox(height: 24),
+                    
+                    // 按钮
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextButton(
+                            onPressed: () => Navigator.of(context).pop(),
+                            child: Text('取消'),
+                            style: TextButton.styleFrom(
+                              padding: EdgeInsets.symmetric(vertical: 16),
+                            ),
+                          ),
+                        ),
+                        SizedBox(width: 12),
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: () async {
+                              // 验证输入
+                              final floorText = floorController.text.trim();
+                              final roomText = roomController.text.trim();
+                              
+                              if (floorText.isEmpty || roomText.isEmpty) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text('请填写完整信息')),
+                                );
+                                return;
+                              }
+                              
+                              final floor = int.tryParse(floorText);
+                              if (floor == null) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text('楼层必须是数字')),
+                                );
+                                return;
+                              }
+                              
+                              // 创建更新的记录
+                              final updatedRecord = MeterRecord(
+                                id: record.id,
+                                imagePath: record.imagePath,
+                                base64Image: record.base64Image,
+                                recognitionResult: record.recognitionResult,
+                                floor: floor,
+                                roomNumber: roomText,
+                                timestamp: record.timestamp,
+                                meterType: selectedMeterType,
+                                requestId: record.requestId,
+                                integerPart: record.integerPart,
+                                decimalPart: record.decimalPart,
+                                recognitionDetails: record.recognitionDetails,
+                                isManuallyEdited: true, // 标记为手动编辑
+                              );
+                              
+                              try {
+                                // 更新记录
+                                await StorageService.updateMeterRecord(updatedRecord);
+                                
+                                // 发布更新事件
+                                eventManager.publish(
+                                  EventType.recordUpdated,
+                                  data: {'record': updatedRecord.toJson()},
+                                );
+                                
+                                // 重新加载数据
+                                await _loadRecords();
+                                
+                                Navigator.of(context).pop();
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text('记录更新成功')),
+                                );
+                              } catch (e) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text('更新失败: $e')),
+                                );
+                              }
+                            },
+                            child: Text('保存'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppTheme.primaryBlue,
+                              foregroundColor: Colors.white,
+                              padding: EdgeInsets.symmetric(vertical: 16),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   // 提取主要读数
   String _extractMainReading(String recognitionResult) {
     if (recognitionResult.isEmpty) return '未识别';
@@ -1320,6 +1568,22 @@ class _MyRecordsScreenState extends State<MyRecordsScreen> with WidgetsBindingOb
                                                       ),
                                                     ),
                                                   ],
+                                                ),
+                                              ),
+                                              SizedBox(width: 8),
+                                              // 编辑按钮
+                                              Container(
+                                                decoration: BoxDecoration(
+                                                  color: Colors.blue.shade50,
+                                                  borderRadius: BorderRadius.circular(12),
+                                                ),
+                                                child: IconButton(
+                                                  icon: Icon(Icons.edit_outlined),
+                                                  color: Colors.blue.shade400,
+                                                  iconSize: 20,
+                                                  onPressed: () => _editRecord(record),
+                                                  padding: EdgeInsets.all(8),
+                                                  constraints: BoxConstraints(),
                                                 ),
                                               ),
                                               SizedBox(width: 8),
