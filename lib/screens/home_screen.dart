@@ -21,6 +21,7 @@ class _HomeScreenState extends State<HomeScreen> {
   File? _image;
   String? _base64Image;
   String? _recognitionResult;
+  String? _originalRecognitionResult; // 新增：保存原始识别结果
   RecognitionResult? _detailedResult; // 新增：保存详细的识别结果
   bool _isRecognizing = false;
   bool _isEditingResult = false;
@@ -97,6 +98,7 @@ class _HomeScreenState extends State<HomeScreen> {
       setState(() {
         _detailedResult = result;
         _recognitionResult = result.displayText;
+        _originalRecognitionResult = result.displayText; // 保存原始识别结果
         _isEditingResult = false;
         _extractReadingToController(result.displayText);
       });
@@ -130,6 +132,10 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _startEditResult() {
+    // 从当前识别结果中提取读数并显示在输入框中
+    if (_recognitionResult != null) {
+      _extractReadingToController(_recognitionResult!);
+    }
     setState(() {
       _isEditingResult = true;
     });
@@ -170,6 +176,31 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  void _resetToOriginalResult() {
+    if (_originalRecognitionResult != null) {
+      setState(() {
+        _recognitionResult = _originalRecognitionResult;
+        _isEditingResult = false;
+        // 重置详细结果，移除手动修正标记
+        if (_detailedResult != null) {
+          _detailedResult = RecognitionResult(
+            success: true,
+            reading: _detailedResult!.reading,
+            displayText: _originalRecognitionResult!,
+            requestId: _detailedResult!.requestId,
+            integerPart: _detailedResult!.integerPart,
+            decimalPart: _detailedResult!.decimalPart,
+            recognitionDetails: _detailedResult!.recognitionDetails,
+          );
+        }
+      });
+      _extractReadingToController(_originalRecognitionResult!);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('已重置为原始识别结果')),
+      );
+    }
+  }
+
   List<int> _getAvailableFloors() {
     final floors = _availableRooms.map((room) => room.floor).toSet().toList();
     floors.sort();
@@ -187,6 +218,17 @@ class _HomeScreenState extends State<HomeScreen> {
     if (_image == null || _recognitionResult == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('请先拍照并完成识别')),
+      );
+      return;
+    }
+
+    // 检查识别结果是否有效
+    if (_recognitionResult!.contains('无法识别')) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('识别失败，请重新拍照或手动修正读数'),
+          backgroundColor: Colors.red.shade600,
+        ),
       );
       return;
     }
@@ -295,6 +337,7 @@ class _HomeScreenState extends State<HomeScreen> {
         _image = null;
         _base64Image = null;
         _recognitionResult = null;
+        _originalRecognitionResult = null; // 清空原始识别结果
         _detailedResult = null; // 清空详细结果
         _isEditingResult = false;
         _selectedFloor = null;
@@ -483,24 +526,39 @@ class _HomeScreenState extends State<HomeScreen> {
                               onSubmitted: (_) => _saveEditedResult(),
                             ),
                             const SizedBox(height: AppTheme.spacingM),
-                            Row(
+                            Column(
                               children: [
-                                Expanded(
-                                  child: AppStyles.primaryButton(
-                                    text: '保存',
-                                    icon: Icons.check,
-                                    onPressed: _saveEditedResult,
-                                    color: AppTheme.success,
-                                  ),
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: AppStyles.primaryButton(
+                                        text: '保存',
+                                        icon: Icons.check,
+                                        onPressed: _saveEditedResult,
+                                        color: AppTheme.success,
+                                      ),
+                                    ),
+                                    const SizedBox(width: AppTheme.spacingM),
+                                    Expanded(
+                                      child: AppStyles.secondaryButton(
+                                        text: '取消',
+                                        icon: Icons.close,
+                                        onPressed: _cancelEditResult,
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                                const SizedBox(width: AppTheme.spacingM),
-                                Expanded(
-                                  child: AppStyles.secondaryButton(
-                                    text: '取消',
-                                    icon: Icons.close,
-                                    onPressed: _cancelEditResult,
+                                const SizedBox(height: AppTheme.spacingM),
+                                if (_originalRecognitionResult != null && _originalRecognitionResult != _recognitionResult)
+                                  SizedBox(
+                                    width: double.infinity,
+                                    child: AppStyles.secondaryButton(
+                                      text: '重置为原始结果',
+                                      icon: Icons.restore,
+                                      onPressed: _resetToOriginalResult,
+                                      color: AppTheme.primaryBlue,
+                                    ),
                                   ),
-                                ),
                               ],
                             ),
                           ],
@@ -733,16 +791,55 @@ class _HomeScreenState extends State<HomeScreen> {
                     
                     const SizedBox(height: AppTheme.spacingXL),
                     
-                    // 保存按钮
+                    // 保存按钮或提示信息
                     SizedBox(
                       width: double.infinity,
-                      child: AppStyles.primaryButton(
-                        text: '保存记录',
-                        icon: Icons.save,
-                        onPressed: _saveRecord,
-                        color: AppTheme.warning,
-                        height: 56,
-                      ),
+                      child: _recognitionResult != null && _recognitionResult!.contains('无法识别')
+                          ? Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: Colors.red.shade50,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: Colors.red.shade200,
+                                  width: 1,
+                                ),
+                              ),
+                              child: Column(
+                                children: [
+                                  Icon(
+                                    Icons.warning_amber_rounded,
+                                    color: Colors.red.shade600,
+                                    size: 32,
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    '识别失败',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.red.shade700,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    '请重新拍照或手动修正读数后再保存',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      color: Colors.red.shade600,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ],
+                              ),
+                            )
+                          : AppStyles.primaryButton(
+                              text: '保存记录',
+                              icon: Icons.save,
+                              onPressed: _saveRecord,
+                              color: AppTheme.warning,
+                              height: 56,
+                            ),
                     ),
                   ],
                 ),

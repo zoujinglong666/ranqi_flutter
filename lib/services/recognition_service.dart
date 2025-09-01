@@ -25,17 +25,17 @@ class RecognitionService {
         
         // 根据实际API返回格式解析结果
         if (result['success'] == true) {
-          final integer = result['integer'] ?? '';
-          final decimal = result['decimal'] ?? '';
+          final integerPart = result['integer'] ?? '';
+          final decimalPart = result['decimal'] ?? '';
           
           // 组合整数和小数部分
           String reading = '';
-          if (integer.isNotEmpty && decimal.isNotEmpty) {
-            reading = '$integer.$decimal';
-          } else if (integer.isNotEmpty) {
-            reading = integer;
-          } else if (decimal.isNotEmpty) {
-            reading = '0.$decimal';
+          if (integerPart.isNotEmpty && decimalPart.isNotEmpty) {
+            reading = '$integerPart.$decimalPart';
+          } else if (integerPart.isNotEmpty) {
+            reading = integerPart;
+          } else if (decimalPart.isNotEmpty) {
+            reading = '0.$decimalPart';
           } else {
             reading = '无法识别';
           }
@@ -68,8 +68,8 @@ class RecognitionService {
             reading: reading,
             displayText: '读数: $reading\n$detailInfo',
             requestId: requestId,
-            integerPart: integer,
-            decimalPart: decimal,
+            integerPart: integerPart,
+            decimalPart: decimalPart,
             recognitionDetails: details,
           );
         } else {
