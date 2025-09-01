@@ -641,9 +641,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
             ),
-            
-            const SizedBox(height: AppTheme.spacingL),
-            
             // 拍照按钮
             Row(
               children: [
@@ -664,9 +661,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ],
             ),
-            
-            const SizedBox(height: AppTheme.spacingL),
-            
+
+            const SizedBox(height: AppTheme.spacingM),
+
             // 识别结果
             if (_isRecognizing)
               AppStyles.card(
@@ -868,12 +865,22 @@ class _HomeScreenState extends State<HomeScreen> {
                               ),
                             ),
                             DropdownMenuItem(
-                              value: '水电',
+                              value: '水表',
                               child: Row(
                                 children: [
                                   Icon(Icons.water_drop, color: Colors.blue, size: 20),
                                   const SizedBox(width: AppTheme.spacingS),
-                                  Text('水电表'),
+                                  Text('水表'),
+                                ],
+                              ),
+                            ),
+                            DropdownMenuItem(
+                              value: '电表',
+                              child: Row(
+                                children: [
+                                  Icon(Icons.electrical_services, color: Colors.blue, size: 20),
+                                  const SizedBox(width: AppTheme.spacingS),
+                                  Text('电表'),
                                 ],
                               ),
                             ),

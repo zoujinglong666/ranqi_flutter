@@ -302,7 +302,7 @@ class _MyRecordsScreenState extends State<MyRecordsScreen> with WidgetsBindingOb
         return Colors.orange.shade700;
       case '水表':
         return Colors.cyan.shade700;
-      case '水电':
+      case '电表':
         return Colors.blue.shade700;
       default:
         return Colors.grey.shade700;
@@ -316,7 +316,7 @@ class _MyRecordsScreenState extends State<MyRecordsScreen> with WidgetsBindingOb
         return Icons.local_fire_department;
       case '水表':
         return Icons.water_drop;
-      case '水电':
+      case '电表':
         return Icons.electrical_services;
       default:
         return Icons.device_unknown;
@@ -383,7 +383,7 @@ class _MyRecordsScreenState extends State<MyRecordsScreen> with WidgetsBindingOb
   // 编辑记录
   Future<void> _editRecord(MeterRecord record) async {
     // 表计类型选项 - 动态获取所有可能的类型
-    final Set<String> allMeterTypes = {'燃气', '水表', '水电'}; // 基础类型
+    final Set<String> allMeterTypes = {'燃气', '水表', '电表'}; // 基础类型
     // 添加所有记录中的表计类型
     for (final r in _allRecords) {
       allMeterTypes.add(r.meterType);
@@ -525,7 +525,7 @@ class _MyRecordsScreenState extends State<MyRecordsScreen> with WidgetsBindingOb
                           }).toList(),
                           onChanged: (String? newValue) {
                             if (newValue != null) {
-                              setState(() {
+                              setModalState(() {
                                 selectedMeterType = newValue;
                               });
                             }
