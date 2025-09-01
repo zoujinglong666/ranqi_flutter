@@ -383,19 +383,65 @@ class _MyRecordsScreenState extends State<MyRecordsScreen> with WidgetsBindingOb
   Future<void> _editRecord(MeterRecord record) async {
     // 控制器
     final meterTypeController = TextEditingController(text: record.meterType);
-    final floorController = TextEditingController(text: record.floor.toString());
     final roomController = TextEditingController(text: record.roomNumber);
     
     // 表计类型选项
     final List<String> meterTypes = ['燃气', '水表', '水电'];
     String selectedMeterType = record.meterType;
     
+    // 楼层和房间号选项
+    List<int> availableFloors = [];
+    List<String> availableRooms = [];
+    int selectedFloor = record.floor;
+    String selectedRoom = record.roomNumber;
+    
+    // 获取可用楼层
+    final allRooms = await StorageService.getRooms();
+    availableFloors = allRooms.map((room) => room.floor).toSet().toList()..sort();
+    
+    // 如果当前楼层不在可用楼层中，添加它
+    if (!availableFloors.contains(selectedFloor)) {
+      availableFloors.add(selectedFloor);
+      availableFloors.sort();
+    }
+    
+    // 获取当前楼层的房间
+    Future<void> updateAvailableRooms(int floor) async {
+      final roomsForFloor = await StorageService.getRoomsByFloor(floor);
+      final storageRooms = roomsForFloor.map((room) => room.roomNumber).toList();
+      
+      // 从记录中获取该楼层的房间号
+      final recordRooms = _allRecords
+          .where((r) => r.floor == floor)
+          .map((r) => r.roomNumber)
+          .where((roomNumber) => roomNumber.isNotEmpty && !roomNumber.contains('_PLACEHOLDER_') && RegExp(r'^[0-9]+[A-Za-z]*$').hasMatch(roomNumber))
+          .toSet();
+      
+      // 合并房间信息并过滤无效数据
+      final allRooms = {...storageRooms, ...recordRooms}
+          .where((roomNumber) => roomNumber.isNotEmpty && !roomNumber.contains('_PLACEHOLDER_') && RegExp(r'^[0-9]+[A-Za-z]*$').hasMatch(roomNumber))
+          .toList();
+      
+      availableRooms = allRooms..sort();
+      
+      // 如果当前房间号不在可用房间中且是有效的，添加它
+      if (!availableRooms.contains(selectedRoom) && 
+          selectedRoom.isNotEmpty && 
+          !selectedRoom.contains('_PLACEHOLDER_') && 
+          RegExp(r'^[0-9]+[A-Za-z]*$').hasMatch(selectedRoom)) {
+        availableRooms.add(selectedRoom);
+        availableRooms.sort();
+      }
+    }
+    
+    await updateAvailableRooms(selectedFloor);
+    
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       builder: (BuildContext context) {
         return StatefulBuilder(
-          builder: (context, setState) {
+          builder: (context, setModalState) {
             return Padding(
               padding: EdgeInsets.only(
                 bottom: MediaQuery.of(context).viewInsets.bottom,
@@ -487,7 +533,7 @@ class _MyRecordsScreenState extends State<MyRecordsScreen> with WidgetsBindingOb
                     ),
                     SizedBox(height: 16),
                     
-                    // 楼层输入
+                    // 楼层选择
                     Text(
                       '楼层',
                       style: TextStyle(
@@ -497,20 +543,52 @@ class _MyRecordsScreenState extends State<MyRecordsScreen> with WidgetsBindingOb
                       ),
                     ),
                     SizedBox(height: 8),
-                    TextField(
-                      controller: floorController,
-                      keyboardType: TextInputType.number,
-                      decoration: InputDecoration(
-                        hintText: '请输入楼层',
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
+                    Container(
+                      padding: EdgeInsets.symmetric(horizontal: 12),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.grey.shade300),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<int>(
+                          value: selectedFloor,
+                          isExpanded: true,
+                          items: availableFloors.map((int floor) {
+                            return DropdownMenuItem<int>(
+                              value: floor,
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    Icons.layers,
+                                    color: AppTheme.primaryBlue,
+                                    size: 20,
+                                  ),
+                                  SizedBox(width: 8),
+                                  Text('${floor}楼'),
+                                ],
+                              ),
+                            );
+                          }).toList(),
+                          onChanged: (int? newValue) {
+                            if (newValue != null) {
+                              selectedFloor = newValue;
+                              updateAvailableRooms(selectedFloor).then((_) {
+                                // 重置房间选择为第一个可用房间
+                                if (availableRooms.isNotEmpty) {
+                                  selectedRoom = availableRooms.first;
+                                } else {
+                                  selectedRoom = '';
+                                }
+                                setModalState(() {});
+                              });
+                            }
+                          },
                         ),
-                        prefixIcon: Icon(Icons.layers),
                       ),
                     ),
                     SizedBox(height: 16),
                     
-                    // 房间号输入
+                    // 房间号选择
                     Text(
                       '房间号',
                       style: TextStyle(
@@ -520,15 +598,72 @@ class _MyRecordsScreenState extends State<MyRecordsScreen> with WidgetsBindingOb
                       ),
                     ),
                     SizedBox(height: 8),
-                    TextField(
-                      controller: roomController,
-                      decoration: InputDecoration(
-                        hintText: '请输入房间号',
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        prefixIcon: Icon(Icons.room),
+                    Container(
+                      padding: EdgeInsets.symmetric(horizontal: 12),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.grey.shade300),
+                        borderRadius: BorderRadius.circular(8),
                       ),
+                      child: availableRooms.isEmpty
+                          ? Padding(
+                              padding: EdgeInsets.symmetric(vertical: 16),
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    Icons.room,
+                                    color: Colors.grey.shade400,
+                                    size: 20,
+                                  ),
+                                  SizedBox(width: 8),
+                                  Text(
+                                    '该楼层暂无房间',
+                                    style: TextStyle(
+                                      color: Colors.grey.shade500,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            )
+                          : DropdownButtonHideUnderline(
+                              child: DropdownButton<String>(
+                                value: (availableRooms.contains(selectedRoom) && selectedRoom.isNotEmpty) ? selectedRoom : null,
+                                isExpanded: true,
+                                hint: Row(
+                                  children: [
+                                    Icon(
+                                      Icons.room,
+                                      color: Colors.grey.shade400,
+                                      size: 20,
+                                    ),
+                                    SizedBox(width: 8),
+                                    Text('请选择房间号'),
+                                  ],
+                                ),
+                                items: availableRooms.map((String room) {
+                                  return DropdownMenuItem<String>(
+                                    value: room,
+                                    child: Row(
+                                      children: [
+                                        Icon(
+                                          Icons.room,
+                                          color: AppTheme.primaryBlue,
+                                          size: 20,
+                                        ),
+                                        SizedBox(width: 8),
+                                        Text(room),
+                                      ],
+                                    ),
+                                  );
+                                }).toList(),
+                                onChanged: (String? newValue) {
+                                  if (newValue != null) {
+                                    setModalState(() {
+                                      selectedRoom = newValue;
+                                    });
+                                  }
+                                },
+                              ),
+                            ),
                     ),
                     SizedBox(height: 24),
                     
@@ -548,21 +683,10 @@ class _MyRecordsScreenState extends State<MyRecordsScreen> with WidgetsBindingOb
                         Expanded(
                           child: ElevatedButton(
                             onPressed: () async {
-                              // 验证输入
-                              final floorText = floorController.text.trim();
-                              final roomText = roomController.text.trim();
-                              
-                              if (floorText.isEmpty || roomText.isEmpty) {
+                              // 验证选择
+                              if (selectedRoom.isEmpty || availableRooms.isEmpty) {
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(content: Text('请填写完整信息')),
-                                );
-                                return;
-                              }
-                              
-                              final floor = int.tryParse(floorText);
-                              if (floor == null) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(content: Text('楼层必须是数字')),
+                                  SnackBar(content: Text('请选择房间号')),
                                 );
                                 return;
                               }
@@ -573,8 +697,8 @@ class _MyRecordsScreenState extends State<MyRecordsScreen> with WidgetsBindingOb
                                 imagePath: record.imagePath,
                                 base64Image: record.base64Image,
                                 recognitionResult: record.recognitionResult,
-                                floor: floor,
-                                roomNumber: roomText,
+                                floor: selectedFloor,
+                                roomNumber: selectedRoom,
                                 timestamp: record.timestamp,
                                 meterType: selectedMeterType,
                                 requestId: record.requestId,
@@ -1044,16 +1168,6 @@ class _MyRecordsScreenState extends State<MyRecordsScreen> with WidgetsBindingOb
                         SizedBox(height: 16),
                       ],
 
-                      // 位置信息
-                      _buildDetailItem(
-                        '位置',
-                        '${record.floor}楼 ${record.roomNumber}',
-                        Icons.location_on,
-                        Colors.green.shade600,
-                      ),
-
-                      SizedBox(height: 16),
-
                       // 表计类型
                       _buildDetailItem(
                         '表计类型',
@@ -1062,17 +1176,17 @@ class _MyRecordsScreenState extends State<MyRecordsScreen> with WidgetsBindingOb
                         _getMeterTypeColor(record.meterType),
                       ),
 
-                      SizedBox(height: 16),
+                      SizedBox(height: 8),
 
                       // 记录时间
                       _buildDetailItem(
                         '记录时间',
-                        DateFormat('yyyy年MM月dd日 HH:mm:ss').format(record.timestamp),
+                        DateFormat('yyyy-MM-dd HH:mm').format(record.timestamp),
                         Icons.access_time,
                         Colors.blue.shade600,
                       ),
 
-                      SizedBox(height: 16),
+                      SizedBox(height: 8),
 
                       // ID信息
                       _buildDetailItem(
@@ -1092,60 +1206,44 @@ class _MyRecordsScreenState extends State<MyRecordsScreen> with WidgetsBindingOb
     );
   }
 
-  // 构建详情项目
+  // 构建详情项目 - 紧凑设计
   Widget _buildDetailItem(String label, String value, IconData icon, Color color) {
-    return Container(
-      padding: EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: color.withOpacity(0.3),
-          width: 1,
+    return Row(
+      children: [
+        Container(
+          padding: EdgeInsets.all(4),
+          decoration: BoxDecoration(
+            color: color,
+            borderRadius: BorderRadius.circular(6),
+          ),
+          child: Icon(
+            icon,
+            size: 14,
+            color: Colors.white,
+          ),
         ),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            padding: EdgeInsets.all(8),
-            decoration: BoxDecoration(
+        SizedBox(width: 8),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            color: Colors.grey.shade600,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            value,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
               color: color,
-              borderRadius: BorderRadius.circular(8),
             ),
-            child: Icon(
-              icon,
-              size: 20,
-              color: Colors.white,
-            ),
+            textAlign: TextAlign.right,
           ),
-          SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  label,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey.shade600,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                SizedBox(height: 4),
-                Text(
-                  value,
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: color,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
   
@@ -1580,9 +1678,9 @@ class _MyRecordsScreenState extends State<MyRecordsScreen> with WidgetsBindingOb
                                                 child: IconButton(
                                                   icon: Icon(Icons.edit_outlined),
                                                   color: Colors.blue.shade400,
-                                                  iconSize: 20,
+                                                  iconSize: 16,
                                                   onPressed: () => _editRecord(record),
-                                                  padding: EdgeInsets.all(8),
+                                                  padding: EdgeInsets.all(4),
                                                   constraints: BoxConstraints(),
                                                 ),
                                               ),
@@ -1596,38 +1694,38 @@ class _MyRecordsScreenState extends State<MyRecordsScreen> with WidgetsBindingOb
                                                 child: IconButton(
                                                   icon: Icon(Icons.delete_outline),
                                                   color: Colors.red.shade400,
-                                                  iconSize: 20,
+                                                  iconSize: 16,
                                                   onPressed: () => _deleteRecord(record),
-                                                  padding: EdgeInsets.all(8),
+                                                  padding: EdgeInsets.all(4),
                                                   constraints: BoxConstraints(),
                                                 ),
                                               ),
                                             ],
                                           ),
                                           
-                                          SizedBox(height: 20),
+                                          SizedBox(height: 12),
                                           
                                           // 主要内容区域
                                           Row(
                                             crossAxisAlignment: CrossAxisAlignment.start,
                                             children: [
-                                              // 左侧图片 - 更大更突出
+                                              // 左侧图片 - 优化尺寸
                                               if (record.imagePath.isNotEmpty) ...[
                                                 Container(
-                                                  width: 100,
-                                                  height: 100,
+                                                  width: 80,
+                                                  height: 80,
                                                   decoration: BoxDecoration(
-                                                    borderRadius: BorderRadius.circular(16),
+                                                    borderRadius: BorderRadius.circular(12),
                                                     boxShadow: [
                                                       BoxShadow(
-                                                        color: Colors.black.withOpacity(0.1),
-                                                        blurRadius: 8,
-                                                        offset: Offset(0, 4),
+                                                        color: Colors.black.withOpacity(0.08),
+                                                        blurRadius: 6,
+                                                        offset: Offset(0, 2),
                                                       ),
                                                     ],
                                                   ),
                                                   child: ClipRRect(
-                                                    borderRadius: BorderRadius.circular(16),
+                                                    borderRadius: BorderRadius.circular(12),
                                                     child: record.imagePath.startsWith('http') 
                                                       ? Image.network(
                                                           record.imagePath,
@@ -1638,7 +1736,7 @@ class _MyRecordsScreenState extends State<MyRecordsScreen> with WidgetsBindingOb
                                                               child: Icon(
                                                                 Icons.broken_image,
                                                                 color: Colors.grey.shade400,
-                                                                size: 40,
+                                                                size: 32,
                                                               ),
                                                             );
                                                           },
@@ -1652,14 +1750,14 @@ class _MyRecordsScreenState extends State<MyRecordsScreen> with WidgetsBindingOb
                                                               child: Icon(
                                                                 Icons.image_not_supported,
                                                                 color: Colors.grey.shade400,
-                                                                size: 40,
+                                                                size: 32,
                                                               ),
                                                             );
                                                           },
                                                         ),
                                                   ),
                                                 ),
-                                                SizedBox(width: 20),
+                                                SizedBox(width: 12),
                                               ],
                                               
                                               // 右侧信息
@@ -1667,137 +1765,105 @@ class _MyRecordsScreenState extends State<MyRecordsScreen> with WidgetsBindingOb
                                                 child: Column(
                                                   crossAxisAlignment: CrossAxisAlignment.start,
                                                   children: [
-                                                    // 读数 - 更突出的显示
-                                                    Container(
-                                                      width: double.infinity,
-                                                      padding: EdgeInsets.all(16),
-                                                      decoration: BoxDecoration(
-                                                        gradient: LinearGradient(
-                                                          colors: [
-                                                            AppTheme.primaryBlue.withOpacity(0.1),
-                                                            AppTheme.primaryBlue.withOpacity(0.05),
-                                                          ],
-                                                        ),
-                                                        borderRadius: BorderRadius.circular(12),
-                                                        border: Border.all(
-                                                          color: AppTheme.primaryBlue.withOpacity(0.2),
-                                                          width: 1,
-                                                        ),
-                                                      ),
-                                                      child: Column(
-                                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                                        children: [
-                                                          Row(
-                                                            children: [
-                                                              Container(
-                                                                padding: EdgeInsets.all(6),
-                                                                decoration: BoxDecoration(
-                                                                  color: AppTheme.primaryBlue,
-                                                                  borderRadius: BorderRadius.circular(8),
-                                                                ),
-                                                                child: Icon(
-                                                                  Icons.speed,
-                                                                  size: 16,
-                                                                  color: Colors.white,
-                                                                ),
-                                                              ),
-                                                              SizedBox(width: 8),
-                                                              Text(
-                                                                '读数',
-                                                                style: TextStyle(
-                                                                  fontSize: 12,
-                                                                  color: Colors.grey.shade600,
-                                                                  fontWeight: FontWeight.w500,
-                                                                ),
-                                                              ),
-                                                            ],
+                                                    // 读数显示 - 紧凑设计
+                                                    Row(
+                                                      children: [
+                                                        Container(
+                                                          padding: EdgeInsets.all(4),
+                                                          decoration: BoxDecoration(
+                                                            color: AppTheme.primaryBlue,
+                                                            borderRadius: BorderRadius.circular(6),
                                                           ),
-                                                          SizedBox(height: 8),
-                                                          Text(
+                                                          child: Icon(
+                                                            Icons.speed,
+                                                            size: 14,
+                                                            color: Colors.white,
+                                                          ),
+                                                        ),
+                                                        SizedBox(width: 8),
+                                                        Text(
+                                                          '读数',
+                                                          style: TextStyle(
+                                                            fontSize: 12,
+                                                            color: Colors.grey.shade600,
+                                                            fontWeight: FontWeight.w500,
+                                                          ),
+                                                        ),
+                                                        SizedBox(width: 8),
+                                                        Expanded(
+                                                          child: Text(
                                                             _extractMainReading(record.recognitionResult),
                                                             style: TextStyle(
-                                                              fontSize: 20,
+                                                              fontSize: 18,
                                                               fontWeight: FontWeight.bold,
                                                               color: AppTheme.primaryBlue,
-                                                              letterSpacing: 0.5,
+                                                              letterSpacing: 0.3,
                                                             ),
+                                                            textAlign: TextAlign.right,
                                                           ),
-                                                        ],
-                                                      ),
+                                                        ),
+                                                      ],
                                                     ),
                                                     
-                                                    SizedBox(height: 16),
+                                                    SizedBox(height: 8),
                                                     
-                                                    // 位置信息 - 更清晰的布局
-                                                    Container(
-                                                      padding: EdgeInsets.all(12),
-                                                      decoration: BoxDecoration(
-                                                        color: Colors.green.shade50,
-                                                        borderRadius: BorderRadius.circular(10),
-                                                        border: Border.all(
-                                                          color: Colors.green.shade200,
-                                                          width: 1,
+                                                    // 位置信息 - 紧凑布局
+                                                    Row(
+                                                      children: [
+                                                        Container(
+                                                          padding: EdgeInsets.all(4),
+                                                          decoration: BoxDecoration(
+                                                            color: Colors.green.shade600,
+                                                            borderRadius: BorderRadius.circular(6),
+                                                          ),
+                                                          child: Icon(
+                                                            Icons.location_on,
+                                                            size: 14,
+                                                            color: Colors.white,
+                                                          ),
                                                         ),
-                                                      ),
-                                                      child: Row(
-                                                        children: [
-                                                          Container(
-                                                            padding: EdgeInsets.all(6),
-                                                            decoration: BoxDecoration(
-                                                              color: Colors.green.shade600,
-                                                              borderRadius: BorderRadius.circular(8),
-                                                            ),
-                                                            child: Icon(
-                                                              Icons.location_on,
-                                                              size: 16,
-                                                              color: Colors.white,
-                                                            ),
+                                                        SizedBox(width: 8),
+                                                        Text(
+                                                          '位置',
+                                                          style: TextStyle(
+                                                            fontSize: 12,
+                                                            color: Colors.grey.shade600,
+                                                            fontWeight: FontWeight.w500,
                                                           ),
-                                                          SizedBox(width: 12),
-                                                          Expanded(
-                                                            child: Column(
-                                                              crossAxisAlignment: CrossAxisAlignment.start,
-                                                              children: [
-                                                                Text(
-                                                                  '位置',
-                                                                  style: TextStyle(
-                                                                    fontSize: 11,
-                                                                    color: Colors.green.shade700,
-                                                                    fontWeight: FontWeight.w500,
-                                                                  ),
-                                                                ),
-                                                                SizedBox(height: 2),
-                                                                Text(
-                                                                  '${record.floor}楼 ${record.roomNumber}',
-                                                                  style: TextStyle(
-                                                                    fontSize: 15,
-                                                                    fontWeight: FontWeight.bold,
-                                                                    color: Colors.green.shade800,
-                                                                  ),
-                                                                ),
-                                                              ],
+                                                        ),
+                                                        SizedBox(width: 8),
+                                                        Expanded(
+                                                          child: Text(
+                                                            '${record.floor}楼 ${record.roomNumber}',
+                                                            style: TextStyle(
+                                                              fontSize: 14,
+                                                              fontWeight: FontWeight.w600,
+                                                              color: Colors.green.shade800,
                                                             ),
+                                                            textAlign: TextAlign.right,
                                                           ),
-                                                          // 点击查看详情提示
-                                                          Container(
-                                                            padding: EdgeInsets.symmetric(
-                                                              horizontal: 8,
-                                                              vertical: 4,
-                                                            ),
-                                                            decoration: BoxDecoration(
-                                                              color: Colors.blue.shade100,
-                                                              borderRadius: BorderRadius.circular(12),
-                                                            ),
-                                                            child: Row(
-                                                              mainAxisSize: MainAxisSize.min,
-                                                              children: [
-                                                                Text(
-                                                                  '详情',
-                                                                  style: TextStyle(
-                                                                    fontSize: 11,
-                                                                    color: Colors.blue.shade700,
-                                                                    fontWeight: FontWeight.w600,
-                                                                  ),
+                                                        ),
+                                                        SizedBox(width: 8),
+                                                        // 查看详情提示
+                                                        Container(
+                                                          padding: EdgeInsets.symmetric(
+                                                            horizontal: 6,
+                                                            vertical: 2,
+                                                          ),
+                                                          decoration: BoxDecoration(
+                                                            color: Colors.blue.shade100,
+                                                            borderRadius: BorderRadius.circular(8),
+                                                          ),
+                                                          child: Row(
+                                                            mainAxisSize: MainAxisSize.min,
+                                                            children: [
+                                                              Text(
+                                                                '详情',
+                                                                style: TextStyle(
+                                                                  fontSize: 10,
+                                                                  color: Colors.blue.shade700,
+                                                                  fontWeight: FontWeight.w600,
+                                                                ),
                                                                 ),
                                                                 SizedBox(width: 2),
                                                                 Icon(
@@ -1810,7 +1876,6 @@ class _MyRecordsScreenState extends State<MyRecordsScreen> with WidgetsBindingOb
                                                           ),
                                                         ],
                                                       ),
-                                                    ),
                                                   ],
                                                 ),
                                               ),
