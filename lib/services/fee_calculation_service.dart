@@ -156,7 +156,7 @@ class FeeCalculationService {
   Future<List<FeeCalculationResult>> calculateBatchFees({
     required int year,
     required int month,
-    List<String>? floors,
+    List<int>? floors,
     List<String>? roomNumbers,
   }) async {
     try {
@@ -196,7 +196,7 @@ class FeeCalculationService {
     try {
       final allRecords = await StorageService.getMeterRecords();
       final roomRecords = allRecords.where((record) => 
-        record.floor == floor && record.roomNumber == roomNumber
+        record.floor == int.parse(floor) && record.roomNumber == roomNumber
       ).toList();
 
       if (roomRecords.isEmpty) return [];

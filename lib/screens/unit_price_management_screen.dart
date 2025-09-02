@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../models/unit_price.dart';
 import '../services/storage_service.dart';
+import '../services/event_manager.dart';
 import '../theme/app_theme.dart';
 
 class UnitPriceManagementScreen extends StatefulWidget {
@@ -389,8 +390,16 @@ class _UnitPriceManagementScreenState extends State<UnitPriceManagementScreen> {
                               
                               if (isEdit) {
                                 await StorageService.updateUnitPrice(newUnitPrice);
+                                eventManager.publish(EventType.recordUpdated, data: {
+                                  'type': 'unit_price',
+                                  'meterType': newUnitPrice.meterType,
+                                });
                               } else {
                                 await StorageService.saveUnitPrice(newUnitPrice);
+                                eventManager.publish(EventType.recordAdded, data: {
+                                  'type': 'unit_price',
+                                  'meterType': newUnitPrice.meterType,
+                                });
                               }
                               
                               Navigator.of(context).pop();

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../models/service_fee.dart';
 import '../services/storage_service.dart';
+import '../services/event_manager.dart';
 import '../theme/app_theme.dart';
 
 class ServiceFeeManagementScreen extends StatefulWidget {
@@ -397,8 +398,18 @@ class _ServiceFeeManagementScreenState extends State<ServiceFeeManagementScreen>
 
                             if (isEdit) {
                               await StorageService.updateServiceFee(newServiceFee);
+                              eventManager.publish(EventType.recordUpdated, data: {
+                                'type': 'service_fee',
+                                'floor': newServiceFee.floor,
+                                'roomNumber': newServiceFee.roomNumber,
+                              });
                             } else {
                               await StorageService.saveServiceFee(newServiceFee);
+                              eventManager.publish(EventType.recordAdded, data: {
+                                'type': 'service_fee',
+                                'floor': newServiceFee.floor,
+                                'roomNumber': newServiceFee.roomNumber,
+                              });
                             }
 
                             Navigator.of(context).pop();

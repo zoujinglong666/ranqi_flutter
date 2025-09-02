@@ -349,6 +349,13 @@ class _FloorManagementScreenState extends State<FloorManagementScreen> with Widg
       
       _rooms.add(newRoom);
       await StorageService.saveRooms(_rooms);
+      
+      // 发布房间新增事件
+      eventManager.publish(
+        EventType.roomAdded,
+        data: {'room': newRoom.toJson()},
+      );
+      
       _loadRooms();
       
       ScaffoldMessenger.of(context).showSnackBar(
@@ -379,6 +386,13 @@ class _FloorManagementScreenState extends State<FloorManagementScreen> with Widg
     if (confirmed == true) {
       _rooms.removeWhere((r) => r.id == room.id);
       await StorageService.saveRooms(_rooms);
+      
+      // 发布房间删除事件
+      eventManager.publish(
+        EventType.roomDeleted,
+        data: {'room': room.toJson()},
+      );
+      
       _loadRooms();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('房间删除成功')),
@@ -675,6 +689,13 @@ class _FloorManagementScreenState extends State<FloorManagementScreen> with Widg
           checkInInfo: result['checkInInfo'] as String?,
         );
         await StorageService.saveRooms(_rooms);
+        
+        // 发布房间更新事件
+        eventManager.publish(
+          EventType.roomUpdated,
+          data: {'room': _rooms[index].toJson()},
+        );
+        
         _loadRooms();
         
         ScaffoldMessenger.of(context).showSnackBar(

@@ -3,6 +3,7 @@ import 'rent_management_screen.dart';
 import 'unit_price_management_screen.dart';
 import 'service_fee_management_screen.dart';
 import 'monthly_report_screen.dart';
+import 'export_config_screen.dart';
 import '../theme/app_theme.dart';
 
 class ManagementScreen extends StatelessWidget {
@@ -39,6 +40,7 @@ class ManagementScreen extends StatelessWidget {
             crossAxisCount: 2,
             crossAxisSpacing: 16,
             mainAxisSpacing: 16,
+            childAspectRatio: 1.1,
             children: [
               _buildManagementCard(
                 context,
@@ -84,6 +86,17 @@ class ManagementScreen extends StatelessWidget {
                   MaterialPageRoute(builder: (context) => MonthlyReportScreen()),
                 ),
               ),
+              _buildManagementCard(
+                context,
+                title: '导出配置',
+                subtitle: '设置报表导出的公司信息和银行账号',
+                icon: Icons.settings,
+                color: Colors.teal,
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => ExportConfigScreen()),
+                ),
+              ),
             ],
           ),
         ),
@@ -122,39 +135,46 @@ class ManagementScreen extends StatelessWidget {
           ),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
             children: [
               Container(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
                   color: color.withOpacity(0.2),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Icon(
                   icon,
-                  size: 32,
+                  size: 28,
                   color: color,
                 ),
               ),
-              const SizedBox(height: 12),
-              Text(
-                title,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: AppTheme.textPrimary,
+              const SizedBox(height: 8),
+              Flexible(
+                child: Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.textPrimary,
+                  ),
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
-                textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 4),
-              Text(
-                subtitle,
-                style: const TextStyle(
-                  fontSize: 12,
-                  color: AppTheme.textSecondary,
+              const SizedBox(height: 2),
+              Flexible(
+                child: Text(
+                  subtitle,
+                  style: const TextStyle(
+                    fontSize: 11,
+                    color: AppTheme.textSecondary,
+                  ),
+                  textAlign: TextAlign.center,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                 ),
-                textAlign: TextAlign.center,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
               ),
             ],
           ),

@@ -7,6 +7,7 @@ import '../models/rent_record.dart';
 import '../models/unit_price.dart';
 import '../models/service_fee.dart';
 import '../models/rent_config.dart';
+import '../models/export_config.dart';
 
 class StorageService {
   static const String _recordsKey = 'meter_records';
@@ -326,6 +327,25 @@ class StorageService {
   static Future<List<ServiceFee>> getServiceFeesByType(String feeType) async {
     final allFees = await getServiceFees();
     return allFees.where((fee) => fee.feeType == feeType).toList();
+  }
+
+  // ==================== 导出配置相关方法 ====================
+  static const String _exportConfigKey = 'export_config';
+
+  // 保存导出配置
+  static Future<void> saveExportConfig(ExportConfig config) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_exportConfigKey, jsonEncode(config.toJson()));
+  }
+
+  // 获取导出配置
+  static Future<ExportConfig> getExportConfig() async {
+    final prefs = await SharedPreferences.getInstance();
+    final configJson = prefs.getString(_exportConfigKey);
+    if (configJson != null) {
+      return ExportConfig.fromJson(jsonDecode(configJson));
+    }
+    return ExportConfig.getDefault();
   }
 
   // ==================== 租金配置相关方法 ====================

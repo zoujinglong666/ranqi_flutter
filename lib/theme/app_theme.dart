@@ -5,6 +5,7 @@ class AppTheme {
   static const Color primaryBlue = Color(0xFF1976D2);
   static const Color primaryLight = Color(0xFF42A5F5);
   static const Color primaryDark = Color(0xFF0D47A1);
+  static const Color primaryColor = primaryBlue; // 主色调别名
   
   // 背景色
   static const Color backgroundPrimary = Color(0xFFF5F5F5);

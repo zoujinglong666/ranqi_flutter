@@ -104,7 +104,7 @@ class _MyRecordsScreenState extends State<MyRecordsScreen> with WidgetsBindingOb
     }
   }
 
-  void _updateFilterOptions() {
+  void _updateFilterOptions() async {
     // 更新表计类型选项 - 添加水表类型
     _availableMeterTypes = _allRecords
         .map((record) => record.meterType)
@@ -123,42 +123,70 @@ class _MyRecordsScreenState extends State<MyRecordsScreen> with WidgetsBindingOb
     }
 
     _availableMeterTypes.sort();
-
-    // 更新楼层选项
-    _availableFloors = _allRecords
-        .map((record) => record.floor)
-        .toSet()
-        .toList()
-        ..sort();
     
-    // 调试信息
-    print('所有记录数量: ${_allRecords.length}');
-    print('可用楼层: $_availableFloors');
-    print('记录详情: ${_allRecords.map((r) => '楼层${r.floor}-房间${r.roomNumber}').toList()}');
+    // 检查当前选中的表计类型是否还存在，如果不存在则重置
+    if (_selectedMeterType != null && !_availableMeterTypes.contains(_selectedMeterType)) {
+      _selectedMeterType = null;
+    }
 
-    // 更新房间选项（根据选择的楼层筛选）
-    if (_selectedFloor != null) {
-      // 先从记录中获取该楼层的房间
-      final recordRooms = _allRecords
-          .where((record) => record.floor == _selectedFloor)
-          .map((record) => record.roomNumber)
-          .toSet();
+    // 更新楼层选项 - 基于楼层管理数据而不是记录数据
+    try {
+      final allRooms = await StorageService.getRooms();
+      _availableFloors = allRooms
+          .where((room) => room.roomNumber != '_PLACEHOLDER_')
+          .map((room) => room.floor)
+          .toSet()
+          .toList()
+          ..sort();
       
-      // 再从存储的房间信息中获取该楼层的房间
-      StorageService.getRoomsByFloor(_selectedFloor!).then((rooms) {
-        final storageRooms = rooms.map((room) => room.roomNumber).toSet();
-        
-        // 合并两个来源的房间信息
-        final allRooms = {...recordRooms, ...storageRooms}.toList()..sort();
-        
-        setState(() {
-          _availableRooms = allRooms;
-        });
-      });
+      // 检查当前选中的楼层是否还存在，如果不存在则重置
+      if (_selectedFloor != null && !_availableFloors.contains(_selectedFloor)) {
+        _selectedFloor = null;
+      }
       
-      // 临时设置，避免异步问题
-      _availableRooms = recordRooms.toList()..sort();
-    } else {
+      // 调试信息
+      print('所有记录数量: ${_allRecords.length}');
+      print('可用楼层(基于房间管理): $_availableFloors');
+      print('记录详情: ${_allRecords.map((r) => '楼层${r.floor}-房间${r.roomNumber}').toList()}');
+
+      // 更新房间选项 - 完全基于楼层管理数据
+      if (_selectedFloor != null) {
+        // 只从存储的房间信息中获取该楼层的房间
+        final roomsForFloor = allRooms
+            .where((room) => room.floor == _selectedFloor && room.roomNumber != '_PLACEHOLDER_')
+            .map((room) => room.roomNumber)
+            .toList()
+            ..sort();
+        
+        _availableRooms = roomsForFloor;
+      } else {
+        // 显示所有楼层的所有房间
+        _availableRooms = allRooms
+            .where((room) => room.roomNumber != '_PLACEHOLDER_')
+            .map((room) => room.roomNumber)
+            .toSet()
+            .toList()
+            ..sort();
+      }
+      
+      // 检查当前选中的房间是否还在可用房间列表中
+      if (_selectedRoom != null && !_availableRooms.contains(_selectedRoom)) {
+        _selectedRoom = null;
+      }
+      
+      // 触发UI更新
+      if (mounted) {
+        setState(() {});
+      }
+    } catch (e) {
+      print('获取房间数据失败: $e');
+      // 如果获取房间数据失败，回退到基于记录的逻辑
+      _availableFloors = _allRecords
+          .map((record) => record.floor)
+          .toSet()
+          .toList()
+          ..sort();
+      
       _availableRooms = _allRecords
           .map((record) => record.roomNumber)
           .toSet()
@@ -172,6 +200,11 @@ class _MyRecordsScreenState extends State<MyRecordsScreen> with WidgetsBindingOb
         .toSet()
         .toList()
         ..sort((a, b) => b.compareTo(a)); // 按时间倒序
+    
+    // 检查当前选中的月份是否还存在，如果不存在则重置
+    if (_selectedMonth != null && !_availableMonths.contains(_selectedMonth)) {
+      _selectedMonth = null;
+    }
   }
 
   void _applyFilters() {
@@ -376,6 +409,13 @@ class _MyRecordsScreenState extends State<MyRecordsScreen> with WidgetsBindingOb
   Future<void> _performDelete(MeterRecord record) async {
     try {
       await StorageService.deleteMeterRecord(record.id);
+      
+      // 发布删除事件
+      eventManager.publish(
+        EventType.recordDeleted,
+        data: {'record': record.toJson()},
+      );
+      
       await _loadRecords();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('记录已删除')),

@@ -32,7 +32,13 @@ dependencies:
   path: ^1.8.3
   
   # 文件分享
-  share_plus: ^7.2.1
+  share_plus: ^11.1.0
+  
+  # WebView
+  webview_flutter: ^4.4.2
+  
+  # 截图和图片处理
+  screenshot: ^3.0.0
   
   # 图标
   cupertino_icons: ^1.0.2

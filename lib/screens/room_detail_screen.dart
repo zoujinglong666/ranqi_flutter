@@ -824,38 +824,19 @@ class _RoomDetailScreenState extends State<RoomDetailScreen> with SingleTickerPr
       );
 
       // 保存到存储
-      try {
-        final rooms = await StorageService.getRooms();
-        final index = rooms.indexWhere((r) => r.id == widget.room.id);
-        if (index != -1) {
-          rooms[index] = updatedRoom;
-          await StorageService.saveRooms(rooms);
-          
-          // 更新当前页面状态
-          setState(() {
-            _currentRoom = updatedRoom;
-          });
-          
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('租户信息更新成功'),
-              backgroundColor: Colors.green,
-            ),
-          );
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('未找到房间信息'),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
-      } catch (e) {
+      final rooms = await StorageService.getRooms();
+      final index = rooms.indexWhere((r) => r.id == widget.room.id);
+      if (index != -1) {
+        rooms[index] = updatedRoom;
+        await StorageService.saveRooms(rooms);
+        
+        // 更新当前页面状态
+        setState(() {
+          _currentRoom = updatedRoom;
+        });
+        
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('保存失败: $e'),
-            backgroundColor: Colors.red,
-          ),
+          SnackBar(content: Text('租户信息更新成功')),
         );
       }
     }
@@ -1147,38 +1128,19 @@ class _RoomDetailScreenState extends State<RoomDetailScreen> with SingleTickerPr
       );
 
       // 保存到存储
-      try {
-        final rooms = await StorageService.getRooms();
-        final index = rooms.indexWhere((r) => r.id == widget.room.id);
-        if (index != -1) {
-          rooms[index] = updatedRoom;
-          await StorageService.saveRooms(rooms);
-          
-          // 更新当前页面状态
-          setState(() {
-            _currentRoom = updatedRoom;
-          });
-          
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('费用设置更新成功'),
-              backgroundColor: Colors.green,
-            ),
-          );
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('未找到房间信息'),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
-      } catch (e) {
+      final rooms = await StorageService.getRooms();
+      final index = rooms.indexWhere((r) => r.id == widget.room.id);
+      if (index != -1) {
+        rooms[index] = updatedRoom;
+        await StorageService.saveRooms(rooms);
+        
+        // 更新当前页面状态
+        setState(() {
+          _currentRoom = updatedRoom;
+        });
+        
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('保存失败: $e'),
-            backgroundColor: Colors.red,
-          ),
+          SnackBar(content: Text('费用设置更新成功')),
         );
       }
     }
