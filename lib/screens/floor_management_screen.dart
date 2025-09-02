@@ -1,9 +1,17 @@
 import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:path/path.dart' as path;
+import 'package:uuid/uuid.dart';
 import '../models/room.dart';
 import '../models/floor.dart';
+import '../models/meter_record.dart';
 import '../services/storage_service.dart';
 import '../services/event_manager.dart';
+import '../services/recognition_service.dart';
 import '../theme/app_theme.dart';
 
 class FloorManagementScreen extends StatefulWidget {
@@ -1009,24 +1017,37 @@ class _FloorManagementScreenState extends State<FloorManagementScreen> with Widg
                             child: Column(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                Icon(
-                                  Icons.home_outlined,
-                                  size: 64,
-                                  color: Colors.grey.shade400,
+                                Container(
+                                  width: 120,
+                                  height: 120,
+                                  decoration: BoxDecoration(
+                                    color: Colors.grey.shade50,
+                                    borderRadius: BorderRadius.circular(60),
+                                    border: Border.all(
+                                      color: Colors.grey.shade200,
+                                      width: 2,
+                                    ),
+                                  ),
+                                  child: Icon(
+                                    Icons.home_outlined,
+                                    size: 48,
+                                    color: Colors.grey.shade400,
+                                  ),
                                 ),
-                                const SizedBox(height: AppTheme.spacingM),
+                                const SizedBox(height: 24),
                                 Text(
                                   '${_selectedFloor}楼暂无房间',
                                   style: TextStyle(
-                                    fontSize: AppTheme.fontSizeSubtitle,
-                                    color: Colors.grey.shade600,
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.grey.shade700,
                                   ),
                                 ),
-                                const SizedBox(height: AppTheme.spacingS),
+                                const SizedBox(height: 8),
                                 Text(
-                                  '请添加房间信息',
+                                  '点击上方按钮添加第一个房间',
                                   style: TextStyle(
-                                    fontSize: AppTheme.fontSizeBody,
+                                    fontSize: 14,
                                     color: Colors.grey.shade500,
                                   ),
                                 ),
@@ -1034,59 +1055,429 @@ class _FloorManagementScreenState extends State<FloorManagementScreen> with Widg
                             ),
                           )
                         : ListView.builder(
-                            padding: const EdgeInsets.all(AppTheme.spacingM),
+                      padding: const EdgeInsets.all(12),
                             itemCount: currentFloorRooms.length,
                             itemBuilder: (context, index) {
                               final room = currentFloorRooms[index];
                               
                               return Container(
-                                margin: const EdgeInsets.only(bottom: AppTheme.spacingS),
+                                margin: const EdgeInsets.only(bottom: 12),
                                 decoration: BoxDecoration(
                                   color: Colors.white,
-                                  borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
-                                  boxShadow: AppTheme.cardShadow,
+                                  borderRadius: BorderRadius.circular(16),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.04),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.02),
+                                      blurRadius: 16,
+                                      offset: const Offset(0, 4),
+                                    ),
+                                  ],
                                 ),
-                                child: ListTile(
-                                  leading: Container(
-                                    padding: const EdgeInsets.all(AppTheme.spacingS),
-                                    decoration: BoxDecoration(
-                                      color: AppTheme.primaryBlue.withOpacity(0.1),
-                                      borderRadius: BorderRadius.circular(AppTheme.radiusSmall),
-                                    ),
-                                    child: Icon(
-                                      Icons.door_front_door,
-                                      color: AppTheme.primaryBlue,
-                                      size: 20,
-                                    ),
-                                  ),
-                                  title: Text(
-                                    '房间 ${room.roomNumber}',
-                                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                  subtitle: Text(
-                                    '${room.floor}楼',
-                                    style: Theme.of(context).textTheme.bodyMedium,
-                                  ),
-                                  trailing: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      IconButton(
-                                        icon: const Icon(Icons.edit, size: 20),
-                                        onPressed: () => _editRoom(room),
-                                        color: AppTheme.primaryBlue,
-                                        tooltip: '编辑',
+                                child: Material(
+                                  color: Colors.transparent,
+                                  child: InkWell(
+                                    borderRadius: BorderRadius.circular(16),
+                                    onTap: () => _editRoom(room),
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(16),
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment
+                                            .start,
+                                        children: [
+                                          // 房间头部信息
+                                          Row(
+                                            children: [
+                                              Container(
+                                                width: 48,
+                                                height: 48,
+                                                decoration: BoxDecoration(
+                                                  gradient: LinearGradient(
+                                                    colors: [
+                                                      AppTheme.primaryBlue,
+                                                      AppTheme.primaryBlue
+                                                          .withOpacity(0.8),
+                                                    ],
+                                                    begin: Alignment.topLeft,
+                                                    end: Alignment.bottomRight,
+                                                  ),
+                                                  borderRadius: BorderRadius
+                                                      .circular(14),
+                                                  boxShadow: [
+                                                    BoxShadow(
+                                                      color: AppTheme
+                                                          .primaryBlue
+                                                          .withOpacity(0.3),
+                                                      blurRadius: 6,
+                                                      offset: const Offset(
+                                                          0, 3),
+                                                    ),
+                                                  ],
+                                                ),
+                                                child: const Icon(
+                                                  Icons.home_rounded,
+                                                  color: Colors.white,
+                                                  size: 24,
+                                                ),
+                                              ),
+                                              const SizedBox(width: 12),
+                                              Expanded(
+                                                child: Column(
+                                                  crossAxisAlignment: CrossAxisAlignment
+                                                      .start,
+                                                  children: [
+                                                    Row(
+                                                      children: [
+                                                        Flexible(
+                                                          child: Text(
+                                                            '房间 ${room
+                                                                .roomNumber}',
+                                                            style: const TextStyle(
+                                                              fontSize: 20,
+                                                              fontWeight: FontWeight
+                                                                  .bold,
+                                                              color: AppTheme
+                                                                  .textPrimary,
+                                                            ),
+                                                            overflow: TextOverflow.ellipsis,
+                                                          ),
+                                                        ),
+                                                        const SizedBox(
+                                                            width: 8),
+                                                        Container(
+                                                          padding: const EdgeInsets
+                                                              .symmetric(
+                                                            horizontal: 8,
+                                                            vertical: 4,
+                                                          ),
+                                                          decoration: BoxDecoration(
+                                                            color: AppTheme
+                                                                .primaryBlue
+                                                                .withOpacity(
+                                                                0.1),
+                                                            borderRadius: BorderRadius
+                                                                .circular(8),
+                                                          ),
+                                                          child: Text(
+                                                            '${room.floor}楼',
+                                                            style: const TextStyle(
+                                                              fontSize: 12,
+                                                              fontWeight: FontWeight
+                                                                  .w600,
+                                                              color: AppTheme
+                                                                  .primaryBlue,
+                                                            ),
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                    const SizedBox(height: 4),
+                                                    if (room.occupantName !=
+                                                        null &&
+                                                        room.occupantName!
+                                                            .isNotEmpty)
+                                                      Row(
+                                                        children: [
+                                                          const Icon(
+                                                            Icons
+                                                                .person_rounded,
+                                                            size: 16,
+                                                            color: AppTheme
+                                                                .success,
+                                                          ),
+                                                          const SizedBox(
+                                                              width: 4),
+                                                          Text(
+                                                            room.occupantName!,
+                                                            style: const TextStyle(
+                                                              fontSize: 14,
+                                                              color: AppTheme
+                                                                  .success,
+                                                              fontWeight: FontWeight
+                                                                  .w500,
+                                                            ),
+                                                          ),
+                                                          const SizedBox(
+                                                              width: 8),
+                                                          Container(
+                                                            width: 6,
+                                                            height: 6,
+                                                            decoration: BoxDecoration(
+                                                              color: AppTheme
+                                                                  .success,
+                                                              borderRadius: BorderRadius
+                                                                  .circular(3),
+                                                            ),
+                                                          ),
+                                                          const SizedBox(
+                                                              width: 8),
+                                                          const Text(
+                                                            '已入住',
+                                                            style: TextStyle(
+                                                              fontSize: 12,
+                                                              color: AppTheme
+                                                                  .success,
+                                                              fontWeight: FontWeight
+                                                                  .w500,
+                                                            ),
+                                                          ),
+                                                        ],
+                                                      )
+                                                    else
+                                                      Row(
+                                                        children: [
+                                                          Container(
+                                                            width: 6,
+                                                            height: 6,
+                                                            decoration: BoxDecoration(
+                                                              color: Colors.grey
+                                                                  .shade400,
+                                                              borderRadius: BorderRadius
+                                                                  .circular(3),
+                                                            ),
+                                                          ),
+                                                          const SizedBox(
+                                                              width: 8),
+                                                          Text(
+                                                            '空置中',
+                                                            style: TextStyle(
+                                                              fontSize: 12,
+                                                              color: Colors.grey
+                                                                  .shade600,
+                                                              fontWeight: FontWeight
+                                                                  .w500,
+                                                            ),
+                                                          ),
+                                                        ],
+                                                      ),
+                                                  ],
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                          const SizedBox(height: 12),
+                                          // 费用信息
+                                          Container(
+                                            padding: const EdgeInsets.all(12),
+                                            decoration: BoxDecoration(
+                                              color: Colors.grey.shade50,
+                                              borderRadius: BorderRadius
+                                                  .circular(12),
+                                              border: Border.all(
+                                                color: Colors.grey.shade200,
+                                                width: 1,
+                                              ),
+                                            ),
+                                            child: Row(
+                                              children: [
+                                                Expanded(
+                                                  child: Column(
+                                                    children: [
+                                                      Row(
+                                                        mainAxisAlignment: MainAxisAlignment
+                                                            .center,
+                                                        children: [
+                                                          Container(
+                                                            padding: const EdgeInsets
+                                                                .all(6),
+                                                            decoration: BoxDecoration(
+                                                              color: Colors.blue
+                                                                  .withOpacity(
+                                                                  0.1),
+                                                              borderRadius: BorderRadius
+                                                                  .circular(8),
+                                                            ),
+                                                            child: const Icon(
+                                                              Icons.water_drop,
+                                                              color: Colors
+                                                                  .blue,
+                                                              size: 16,
+                                                            ),
+                                                          ),
+                                                          const SizedBox(
+                                                              width: 8),
+                                                          Text(
+                                                            '水费',
+                                                            style: TextStyle(
+                                                              fontSize: 12,
+                                                              color: Colors.grey
+                                                                  .shade600,
+                                                              fontWeight: FontWeight
+                                                                  .w500,
+                                                            ),
+                                                          ),
+                                                        ],
+                                                      ),
+                                                      const SizedBox(height: 8),
+                                                      Text(
+                                                        '${room
+                                                            .waterPricePerTon}元/吨',
+                                                        style: const TextStyle(
+                                                          fontSize: 16,
+                                                          fontWeight: FontWeight
+                                                              .bold,
+                                                          color: AppTheme
+                                                              .textPrimary,
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
+                                                Container(
+                                                  width: 1,
+                                                  height: 40,
+                                                  color: Colors.grey.shade300,
+                                                ),
+                                                Expanded(
+                                                  child: Column(
+                                                    children: [
+                                                      Row(
+                                                        mainAxisAlignment: MainAxisAlignment
+                                                            .center,
+                                                        children: [
+                                                          Container(
+                                                            padding: const EdgeInsets
+                                                                .all(6),
+                                                            decoration: BoxDecoration(
+                                                              color: Colors
+                                                                  .amber
+                                                                  .withOpacity(
+                                                                  0.1),
+                                                              borderRadius: BorderRadius
+                                                                  .circular(8),
+                                                            ),
+                                                            child: Icon(
+                                                              Icons
+                                                                  .electrical_services,
+                                                              color: Colors
+                                                                  .amber
+                                                                  .shade700,
+                                                              size: 16,
+                                                            ),
+                                                          ),
+                                                          const SizedBox(
+                                                              width: 8),
+                                                          Text(
+                                                            '电费',
+                                                            style: TextStyle(
+                                                              fontSize: 12,
+                                                              color: Colors.grey
+                                                                  .shade600,
+                                                              fontWeight: FontWeight
+                                                                  .w500,
+                                                            ),
+                                                          ),
+                                                        ],
+                                                      ),
+                                                      const SizedBox(height: 8),
+                                                      Text(
+                                                        '${room
+                                                            .electricityPricePerKwh}元/度',
+                                                        style: const TextStyle(
+                                                          fontSize: 16,
+                                                          fontWeight: FontWeight
+                                                              .bold,
+                                                          color: AppTheme
+                                                              .textPrimary,
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                          const SizedBox(height: 12),
+                                          // 操作按钮
+                                          Row(
+                                            children: [
+                                              Expanded(
+                                                child: SizedBox(
+                                                  child: ElevatedButton.icon(
+                                                    onPressed: () =>
+                                                        _showCameraOptions(
+                                                            room),
+                                                    icon: const Icon(
+                                                      Icons.camera_alt_rounded,
+                                                      size: 12,
+                                                    ),
+                                                    label: const Text(
+                                                      '拍照',
+                                                      style: TextStyle(
+                                                        fontSize: 12,
+                                                        fontWeight: FontWeight
+                                                            .w600,
+                                                      ),
+                                                    ),
+                                                    style: ElevatedButton
+                                                        .styleFrom(
+                                                      backgroundColor: AppTheme
+                                                          .warning,
+                                                      foregroundColor: Colors
+                                                          .white,
+                                                      elevation: 0,
+                                                      shape: RoundedRectangleBorder(
+                                                        borderRadius: BorderRadius
+                                                            .circular(12),
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ),
+                                              ),
+                                              const SizedBox(width: 8),
+                                              SizedBox(
+                                                width: 40,
+                                                height: 40,
+                                                child: Material(
+                                                  color: Colors.grey.shade100,
+                                                  borderRadius: BorderRadius
+                                                      .circular(12),
+                                                  child: InkWell(
+                                                    borderRadius: BorderRadius
+                                                        .circular(12),
+                                                    onTap: () =>
+                                                        _editRoom(room),
+                                                    child: const Icon(
+                                                      Icons.edit_rounded,
+                                                      color: AppTheme
+                                                          .primaryBlue,
+                                                      size: 20,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ),
+                                              const SizedBox(width: 6),
+                                              SizedBox(
+                                                width: 40,
+                                                height: 40,
+                                                child: Material(
+                                                  color: Colors.red.shade50,
+                                                  borderRadius: BorderRadius
+                                                      .circular(12),
+                                                  child: InkWell(
+                                                    borderRadius: BorderRadius
+                                                        .circular(12),
+                                                    onTap: () =>
+                                                        _deleteRoom(room),
+                                                    child: Icon(
+                                                      Icons.delete_rounded,
+                                                      color: Colors.red
+                                                          .shade400,
+                                                      size: 20,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ],
                                       ),
-                                      IconButton(
-                                        icon: const Icon(Icons.delete, size: 20),
-                                        onPressed: () => _deleteRoom(room),
-                                        color: AppTheme.error,
-                                        tooltip: '删除',
-                                      ),
-                                    ],
+                                    ),
                                   ),
-                                  onTap: () => _editRoom(room),
                                 ),
                               );
                             },
@@ -1179,6 +1570,593 @@ class _FloorManagementScreenState extends State<FloorManagementScreen> with Widg
         ),
       ],
     );
+  }
+
+  // 拍照识别相关方法
+  Future<void> _showCameraOptions(Room room) async {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) =>
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(20),
+                topRight: Radius.circular(20),
+              ),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // 顶部拖拽条
+                Container(
+                  margin: EdgeInsets.only(top: 12),
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                // 标题
+                Container(
+                  width: double.infinity,
+                  padding: EdgeInsets.all(24),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.camera_alt,
+                        color: AppTheme.warning,
+                        size: 24,
+                      ),
+                      SizedBox(width: 12),
+                      Text(
+                        '表计识别 - ${room.floor}楼${room.roomNumber}',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: AppTheme.textPrimary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Divider(height: 1),
+                // 选项列表
+                ListTile(
+                  leading: Container(
+                    padding: EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppTheme.primaryBlue.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(
+                      Icons.camera_alt,
+                      color: AppTheme.primaryBlue,
+                      size: 24,
+                    ),
+                  ),
+                  title: Text(
+                    '拍照识别',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  subtitle: Text(
+                    '使用相机拍摄表计读数',
+                    style: TextStyle(
+                      color: Colors.grey.shade600,
+                      fontSize: 14,
+                    ),
+                  ),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _takePictureForRoom(room);
+                  },
+                ),
+                ListTile(
+                  leading: Container(
+                    padding: EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppTheme.success.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(
+                      Icons.photo_library,
+                      color: AppTheme.success,
+                      size: 24,
+                    ),
+                  ),
+                  title: Text(
+                    '从相册选择',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  subtitle: Text(
+                    '从相册中选择表计照片',
+                    style: TextStyle(
+                      color: Colors.grey.shade600,
+                      fontSize: 14,
+                    ),
+                  ),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _pickFromGalleryForRoom(room);
+                  },
+                ),
+                SizedBox(height: 20),
+              ],
+            ),
+          ),
+    );
+  }
+
+  Future<void> _takePictureForRoom(Room room) async {
+    final picker = ImagePicker();
+    final pickedFile = await picker.pickImage(source: ImageSource.camera);
+
+    if (pickedFile != null) {
+      final file = File(pickedFile.path);
+      _processImageForRoom(file, room);
+    }
+  }
+
+  Future<void> _pickFromGalleryForRoom(Room room) async {
+    final picker = ImagePicker();
+    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+
+    if (pickedFile != null) {
+      final file = File(pickedFile.path);
+      _processImageForRoom(file, room);
+    }
+  }
+
+  Future<void> _processImageForRoom(File imageFile, Room room) async {
+    try {
+      // 显示加载对话框
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) =>
+            AlertDialog(
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CircularProgressIndicator(color: AppTheme.primaryBlue),
+                  SizedBox(height: 16),
+                  Text('正在识别表计读数...'),
+                ],
+              ),
+            ),
+      );
+
+      // 转换图片为base64
+      final bytes = await imageFile.readAsBytes();
+      final base64Image = base64Encode(bytes);
+
+      // 调用识别服务
+      final result = await RecognitionService.recognizeMeter(base64Image);
+
+      // 关闭加载对话框
+      Navigator.of(context).pop();
+
+      if (result.success) {
+        // 显示识别结果并让用户选择表计类型和确认保存
+        _showRecognitionResult(imageFile, base64Image, result, room);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result.errorMessage ?? '识别失败'),
+            backgroundColor: Colors.red.shade600,
+          ),
+        );
+      }
+    } catch (e) {
+      // 关闭可能存在的加载对话框
+      if (Navigator.of(context).canPop()) {
+        Navigator.of(context).pop();
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('识别失败: $e'),
+          backgroundColor: Colors.red.shade600,
+        ),
+      );
+    }
+  }
+
+  Future<void> _showRecognitionResult(File imageFile, String base64Image,
+      RecognitionResult result, Room room) async {
+    String selectedMeterType = '燃气';
+    final resultController = TextEditingController();
+    bool isEditingResult = false;
+
+    // 提取读数到输入框
+    final regex = RegExp(r'读数[：:]\s*([0-9]+\.?[0-9]*)');
+    final match = regex.firstMatch(result.displayText);
+    if (match != null) {
+      resultController.text = match.group(1) ?? '';
+    } else {
+      final numberRegex = RegExp(r'([0-9]+\.?[0-9]*)');
+      final numberMatch = numberRegex.firstMatch(result.displayText);
+      resultController.text = numberMatch?.group(1) ?? '';
+    }
+
+    final confirmed = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) =>
+          StatefulBuilder(
+            builder: (context, setState) =>
+                Padding(
+                  padding: EdgeInsets.only(bottom: MediaQuery
+                      .of(context)
+                      .viewInsets
+                      .bottom),
+                  child: Container(
+                    height: MediaQuery
+                        .of(context)
+                        .size
+                        .height * 0.8,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.only(
+                        topLeft: Radius.circular(20),
+                        topRight: Radius.circular(20),
+                      ),
+                    ),
+                    child: Column(
+                      children: [
+                        // 顶部拖拽条
+                        Container(
+                          margin: EdgeInsets.only(top: 12),
+                          width: 40,
+                          height: 4,
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade300,
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                        ),
+                        // 标题栏
+                        Container(
+                          width: double.infinity,
+                          padding: EdgeInsets.all(24),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.check_circle,
+                                color: AppTheme.success,
+                                size: 24,
+                              ),
+                              SizedBox(width: 12),
+                              Text(
+                                '识别结果 - ${room.floor}楼${room.roomNumber}',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppTheme.textPrimary,
+                                ),
+                              ),
+                              Spacer(),
+                              IconButton(
+                                onPressed: () =>
+                                    Navigator.of(context).pop(false),
+                                icon: Icon(
+                                    Icons.close, color: Colors.grey.shade600),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Divider(height: 1),
+                        // 内容区域
+                        Expanded(
+                          child: SingleChildScrollView(
+                            padding: EdgeInsets.all(24),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                // 图片预览
+                                Container(
+                                  width: double.infinity,
+                                  height: 200,
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(
+                                        color: Colors.grey.shade300),
+                                  ),
+                                  child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(12),
+                                    child: Image.file(
+                                      imageFile,
+                                      fit: BoxFit.cover,
+                                    ),
+                                  ),
+                                ),
+                                SizedBox(height: 20),
+
+                                // 识别结果
+                                Text(
+                                  '识别结果',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppTheme.textPrimary,
+                                  ),
+                                ),
+                                SizedBox(height: 8),
+                                Container(
+                                  width: double.infinity,
+                                  padding: EdgeInsets.all(16),
+                                  decoration: BoxDecoration(
+                                    color: AppTheme.success.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
+                                        color: AppTheme.success.withOpacity(
+                                            0.3)),
+                                  ),
+                                  child: Text(
+                                    result.displayText,
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      color: AppTheme.textPrimary,
+                                    ),
+                                  ),
+                                ),
+                                SizedBox(height: 20),
+
+                                // 表计类型选择
+                                Text(
+                                  '表计类型',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppTheme.textPrimary,
+                                  ),
+                                ),
+                                SizedBox(height: 8),
+                                Container(
+                                  width: double.infinity,
+                                  padding: EdgeInsets.symmetric(horizontal: 16),
+                                  decoration: BoxDecoration(
+                                    border: Border.all(
+                                        color: Colors.grey.shade300),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: DropdownButtonHideUnderline(
+                                    child: DropdownButton<String>(
+                                      value: selectedMeterType,
+                                      isExpanded: true,
+                                      items: [
+                                        DropdownMenuItem(
+                                          value: '燃气',
+                                          child: Row(
+                                            children: [
+                                              Icon(Icons.local_fire_department,
+                                                  color: Colors.orange,
+                                                  size: 20),
+                                              SizedBox(width: 8),
+                                              Text('燃气表'),
+                                            ],
+                                          ),
+                                        ),
+                                        DropdownMenuItem(
+                                          value: '水表',
+                                          child: Row(
+                                            children: [
+                                              Icon(Icons.water_drop,
+                                                  color: Colors.blue, size: 20),
+                                              SizedBox(width: 8),
+                                              Text('水表'),
+                                            ],
+                                          ),
+                                        ),
+                                        DropdownMenuItem(
+                                          value: '电表',
+                                          child: Row(
+                                            children: [
+                                              Icon(Icons.electrical_services,
+                                                  color: Colors.blue, size: 20),
+                                              SizedBox(width: 8),
+                                              Text('电表'),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
+                                      onChanged: (value) {
+                                        setState(() {
+                                          selectedMeterType = value!;
+                                        });
+                                      },
+                                    ),
+                                  ),
+                                ),
+                                SizedBox(height: 20),
+
+                                // 读数编辑
+                                Text(
+                                  '读数确认',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppTheme.textPrimary,
+                                  ),
+                                ),
+                                SizedBox(height: 8),
+                                TextField(
+                                  controller: resultController,
+                                  decoration: InputDecoration(
+                                    labelText: '表计读数',
+                                    hintText: '请确认或修正读数',
+                                    prefixIcon: Icon(Icons.edit),
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                  ),
+                                  keyboardType: TextInputType.numberWithOptions(
+                                      decimal: true),
+                                ),
+                                SizedBox(height: 40),
+                              ],
+                            ),
+                          ),
+                        ),
+                        // 按钮区域
+                        Container(
+                          width: double.infinity,
+                          padding: EdgeInsets.all(24),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            border: Border(top: BorderSide(color: Colors.grey
+                                .shade200)),
+                          ),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: TextButton(
+                                  onPressed: () =>
+                                      Navigator.of(context).pop(false),
+                                  style: TextButton.styleFrom(
+                                    padding: EdgeInsets.symmetric(vertical: 16),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                      side: BorderSide(
+                                          color: Colors.grey.shade300),
+                                    ),
+                                  ),
+                                  child: Text(
+                                    '取消',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      color: Colors.grey.shade600,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              SizedBox(width: 16),
+                              Expanded(
+                                flex: 2,
+                                child: ElevatedButton(
+                                  onPressed: () {
+                                    if (resultController.text
+                                        .trim()
+                                        .isEmpty) {
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(
+                                        SnackBar(content: Text('请输入读数')),
+                                      );
+                                      return;
+                                    }
+                                    Navigator.of(context).pop(true);
+                                  },
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: AppTheme.success,
+                                    foregroundColor: Colors.white,
+                                    padding: EdgeInsets.symmetric(vertical: 16),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    elevation: 2,
+                                  ),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(Icons.save, size: 18),
+                                      SizedBox(width: 8),
+                                      Text(
+                                        '保存记录',
+                                        style: TextStyle(fontSize: 16,
+                                            fontWeight: FontWeight.w600),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+          ),
+    );
+
+    if (confirmed == true) {
+      await _saveRecordForRoom(
+          imageFile, base64Image, result, room, selectedMeterType,
+          resultController.text.trim());
+    }
+  }
+
+  Future<void> _saveRecordForRoom(File imageFile, String base64Image,
+      RecognitionResult result, Room room, String meterType,
+      String finalReading) async {
+    try {
+      // 将图片复制到应用的永久存储目录
+      final appDir = await getApplicationDocumentsDirectory();
+      final imagesDir = Directory(path.join(appDir.path, 'meter_images'));
+      if (!await imagesDir.exists()) {
+        await imagesDir.create(recursive: true);
+      }
+
+      final fileName = '${Uuid().v4()}.jpg';
+      final permanentImagePath = path.join(imagesDir.path, fileName);
+      await imageFile.copy(permanentImagePath);
+
+      // 构建最终的识别结果文本
+      String finalResultText = '读数: $finalReading';
+      if (finalReading != (result.reading ?? '')) {
+        finalResultText += ' (手动修正)';
+      }
+
+      final record = MeterRecord(
+        id: Uuid().v4(),
+        imagePath: permanentImagePath,
+        base64Image: base64Image,
+        recognitionResult: finalResultText,
+        floor: room.floor,
+        roomNumber: room.roomNumber,
+        timestamp: DateTime.now(),
+        meterType: meterType,
+        requestId: result.requestId,
+        integerPart: result.integerPart,
+        decimalPart: result.decimalPart,
+        recognitionDetails: result.recognitionDetails,
+        isManuallyEdited: finalReading != (result.reading ?? ''),
+      );
+
+      await StorageService.saveMeterRecord(record);
+
+      // 发布记录新增事件
+      eventManager.publish(
+        EventType.recordAdded,
+        data: {
+          'record': record,
+          'floor': room.floor,
+          'roomNumber': room.roomNumber,
+        },
+      );
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('表计记录保存成功 - ${room.floor}楼${room.roomNumber}'),
+          backgroundColor: AppTheme.success,
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('保存失败: $e'),
+          backgroundColor: Colors.red.shade600,
+        ),
+      );
+    }
   }
 
   @override
