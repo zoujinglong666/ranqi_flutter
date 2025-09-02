@@ -60,25 +60,24 @@ class _UnitPriceManagementScreenState extends State<UnitPriceManagementScreen> {
       backgroundColor: Colors.transparent,
       builder: (BuildContext context) {
         return StatefulBuilder(
-          builder: (context, setModalState) => Padding(
+          builder: (context, setModalState) => Container(
+            height: MediaQuery.of(context).size.height * 0.9,
             padding: EdgeInsets.only(
               bottom: MediaQuery.of(context).viewInsets.bottom,
             ),
-            child: Container(
-              padding: const EdgeInsets.all(24),
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.only(
-                  topLeft: Radius.circular(AppTheme.radiusXLarge),
-                  topRight: Radius.circular(AppTheme.radiusXLarge),
-                ),
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(AppTheme.radiusXLarge),
+                topRight: Radius.circular(AppTheme.radiusXLarge),
               ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // 标题栏
-                  Row(
+            ),
+            child: Column(
+              children: [
+                // 固定标题栏
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  child: Row(
                     children: [
                       Container(
                         padding: const EdgeInsets.all(8),
@@ -108,7 +107,15 @@ class _UnitPriceManagementScreenState extends State<UnitPriceManagementScreen> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: AppTheme.spacingL),
+                ),
+                // 可滚动内容区域
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+
                   
                   // 表计类型选择
                   Text(
@@ -310,10 +317,21 @@ class _UnitPriceManagementScreenState extends State<UnitPriceManagementScreen> {
                       ),
                     ),
                   ),
-                  const SizedBox(height: AppTheme.spacingXL),
-                  
-                  // 操作按钮
-                  Row(
+                        const SizedBox(height: 20),
+                      ],
+                    ),
+                  ),
+                ),
+                // 固定底部按钮
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    border: Border(
+                      top: BorderSide(color: Colors.grey.shade200),
+                    ),
+                  ),
+                  child: Row(
                     children: [
                       if (isEdit)
                         Expanded(
@@ -400,8 +418,8 @@ class _UnitPriceManagementScreenState extends State<UnitPriceManagementScreen> {
                       ),
                     ],
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         );

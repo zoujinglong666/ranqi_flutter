@@ -116,10 +116,11 @@ class _RentManagementScreenState extends State<RentManagementScreen> {
                     topRight: Radius.circular(20),
                   ),
                 ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
                     // 标题
                     Row(
                       children: [
@@ -416,6 +417,7 @@ class _RentManagementScreenState extends State<RentManagementScreen> {
                       ],
                     ),
                   ],
+                  ),
                 ),
               ),
             );
@@ -456,10 +458,11 @@ class _RentManagementScreenState extends State<RentManagementScreen> {
                 topRight: Radius.circular(20),
               ),
             ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
                 // 标题
                 Row(
                   children: [
@@ -653,9 +656,10 @@ class _RentManagementScreenState extends State<RentManagementScreen> {
                   ],
                 ),
               ],
+                ),
+              ),
             ),
-          ),
-        );
+          );
       },
     );
   }

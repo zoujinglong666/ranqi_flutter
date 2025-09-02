@@ -13,6 +13,7 @@ import '../services/storage_service.dart';
 import '../services/event_manager.dart';
 import '../services/recognition_service.dart';
 import '../theme/app_theme.dart';
+import 'room_detail_screen.dart';
 
 class FloorManagementScreen extends StatefulWidget {
   @override
@@ -383,6 +384,16 @@ class _FloorManagementScreenState extends State<FloorManagementScreen> with Widg
         SnackBar(content: Text('房间删除成功')),
       );
     }
+  }
+
+  // 导航到房间详情管理界面
+  void _navigateToRoomDetail(Room room) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => RoomDetailScreen(room: room),
+      ),
+    );
   }
 
   Future<void> _editRoom(Room room) async {
@@ -1082,7 +1093,7 @@ class _FloorManagementScreenState extends State<FloorManagementScreen> with Widg
                                   color: Colors.transparent,
                                   child: InkWell(
                                     borderRadius: BorderRadius.circular(16),
-                                    onTap: () => _editRoom(room),
+                                    onTap: () => _navigateToRoomDetail(room),
                                     child: Padding(
                                       padding: const EdgeInsets.all(16),
                                       child: Column(

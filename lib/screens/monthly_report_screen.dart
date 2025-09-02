@@ -754,7 +754,7 @@ class _MonthlyReportScreenState extends State<MonthlyReportScreen> {
               SizedBox(height: AppTheme.spacingM),
               
               // 单个房间导出
-              const Text(
+              Text(
                 '单个房间',
                 style: TextStyle(
                   fontSize: AppTheme.fontSizeBody,
@@ -763,6 +763,7 @@ class _MonthlyReportScreenState extends State<MonthlyReportScreen> {
                 ),
               ),
               SizedBox(height: AppTheme.spacingS),
+              
               Container(
                 height: 200,
                 decoration: BoxDecoration(

@@ -75,15 +75,21 @@ class _ServiceFeeManagementScreenState extends State<ServiceFeeManagementScreen>
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) => StatefulBuilder(
-        builder: (context, setModalState) => Container(
-          height: MediaQuery.of(context).size.height * 0.85,
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.only(
-              topLeft: Radius.circular(AppTheme.radiusLarge),
-              topRight: Radius.circular(AppTheme.radiusLarge),
-            ),
+        builder: (context, setModalState) => Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom,
           ),
+          child: Container(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(context).size.height * 0.9,
+            ),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(AppTheme.radiusLarge),
+                topRight: Radius.circular(AppTheme.radiusLarge),
+              ),
+            ),
           child: Column(
             children: [
               // 标题栏
@@ -119,6 +125,8 @@ class _ServiceFeeManagementScreenState extends State<ServiceFeeManagementScreen>
               // 表单内容
               Expanded(
                 child: SingleChildScrollView(
+                  physics: ClampingScrollPhysics(),
+                  keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
                   padding: EdgeInsets.all(AppTheme.spacingL),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -280,7 +288,7 @@ class _ServiceFeeManagementScreenState extends State<ServiceFeeManagementScreen>
                           ),
                         ),
                       ),
-                      SizedBox(height: AppTheme.spacingXL),
+                      SizedBox(height: MediaQuery.of(context).viewInsets.bottom + AppTheme.spacingXL * 2),
                     ],
                   ),
                 ),
@@ -429,6 +437,7 @@ class _ServiceFeeManagementScreenState extends State<ServiceFeeManagementScreen>
           ),
         ),
       ),
+    ),
     );
   }
 
