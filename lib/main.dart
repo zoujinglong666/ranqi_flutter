@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'screens/home_screen.dart';
 import 'screens/floor_management_screen.dart';
-import 'screens/my_records_screen.dart';
-import 'screens/management_screen.dart';
+import 'screens/my_screen.dart';
+import 'screens/login_screen.dart';
 import 'services/migration_service.dart';
 import 'theme/app_theme.dart';
 
@@ -16,7 +16,11 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: '燃气水表识别',
       theme: AppTheme.lightTheme,
-      home: MainScreen(),
+      initialRoute: '/login',
+      routes: {
+        '/login': (context) => LoginScreen(),
+        '/main': (context) => MainScreen(),
+      },
       debugShowCheckedModeBanner: false,
     );
   }
@@ -35,8 +39,7 @@ class _MainScreenState extends State<MainScreen> with AutomaticKeepAliveClientMi
   final List<Widget> _screens = [
     HomeScreen(),
     FloorManagementScreen(),
-    MyRecordsScreen(),
-    ManagementScreen(),
+    MyScreen(), // 现在作为"我的"界面
   ];
 
   @override
@@ -137,14 +140,9 @@ class _MainScreenState extends State<MainScreen> with AutomaticKeepAliveClientMi
               label: '楼层',
             ),
             BottomNavigationBarItem(
-              icon: Icon(Icons.history_outlined),
-              activeIcon: Icon(Icons.history),
-              label: '记录',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.settings_outlined),
-              activeIcon: Icon(Icons.settings),
-              label: '管理',
+              icon: Icon(Icons.person_outlined),
+              activeIcon: Icon(Icons.person),
+              label: '我的',
             ),
           ],
         ),

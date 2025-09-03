@@ -1,38 +1,43 @@
 import 'dart:async';
 import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../models/meter_record.dart';
-import '../services/storage_service.dart';
 import '../services/event_manager.dart';
+import '../services/storage_service.dart';
 import '../theme/app_theme.dart';
 
-class MyRecordsScreen extends StatefulWidget {
+
+
+
+
+class AllRecordsScreen extends StatefulWidget {
   @override
-  _MyRecordsScreenState createState() => _MyRecordsScreenState();
+  _AllRecordsScreenState createState() => _AllRecordsScreenState();
 }
 
-class _MyRecordsScreenState extends State<MyRecordsScreen> with WidgetsBindingObserver {
+class _AllRecordsScreenState extends State<AllRecordsScreen> with WidgetsBindingObserver {
   List<MeterRecord> _allRecords = [];
   List<MeterRecord> _filteredRecords = [];
   bool _isLoading = true;
   bool _isFilterExpanded = false; // 筛选区域展开状态
-  
+
   // 筛选条件
   String? _selectedMeterType;
   int? _selectedFloor;
   String? _selectedRoom;
   String? _selectedMonth;
-  
+
   // 快捷选择状态
   String? _selectedQuickFilter;
-  
+
   // 筛选选项
   List<String> _availableMeterTypes = [];
   List<int> _availableFloors = [];
   List<String> _availableRooms = [];
   List<String> _availableMonths = [];
-  
+
   // 事件订阅
   StreamSubscription<EventData>? _recordEventSubscription;
 
@@ -60,12 +65,12 @@ class _MyRecordsScreenState extends State<MyRecordsScreen> with WidgetsBindingOb
     _recordEventSubscription?.cancel();
     super.dispose();
   }
-  
+
   /// 订阅事件
   void _subscribeToEvents() {
     _recordEventSubscription = eventManager.subscribeMultiple(
       [EventType.recordAdded, EventType.recordUpdated, EventType.recordDeleted],
-      (eventData) {
+          (eventData) {
         // 当有记录相关事件时，重新加载数据
         if (mounted) {
           _loadRecords();
@@ -110,7 +115,7 @@ class _MyRecordsScreenState extends State<MyRecordsScreen> with WidgetsBindingOb
         .map((record) => record.meterType)
         .toSet()
         .toList();
-    
+
     // 确保包含所有可能的表计类型
     if (!_availableMeterTypes.contains('燃气')) {
       _availableMeterTypes.add('燃气');
@@ -123,7 +128,7 @@ class _MyRecordsScreenState extends State<MyRecordsScreen> with WidgetsBindingOb
     }
 
     _availableMeterTypes.sort();
-    
+
     // 检查当前选中的表计类型是否还存在，如果不存在则重置
     if (_selectedMeterType != null && !_availableMeterTypes.contains(_selectedMeterType)) {
       _selectedMeterType = null;
@@ -137,13 +142,13 @@ class _MyRecordsScreenState extends State<MyRecordsScreen> with WidgetsBindingOb
           .map((room) => room.floor)
           .toSet()
           .toList()
-          ..sort();
-      
+        ..sort();
+
       // 检查当前选中的楼层是否还存在，如果不存在则重置
       if (_selectedFloor != null && !_availableFloors.contains(_selectedFloor)) {
         _selectedFloor = null;
       }
-      
+
       // 调试信息
       print('所有记录数量: ${_allRecords.length}');
       print('可用楼层(基于房间管理): $_availableFloors');
@@ -156,8 +161,8 @@ class _MyRecordsScreenState extends State<MyRecordsScreen> with WidgetsBindingOb
             .where((room) => room.floor == _selectedFloor && room.roomNumber != '_PLACEHOLDER_')
             .map((room) => room.roomNumber)
             .toList()
-            ..sort();
-        
+          ..sort();
+
         _availableRooms = roomsForFloor;
       } else {
         // 显示所有楼层的所有房间
@@ -166,14 +171,14 @@ class _MyRecordsScreenState extends State<MyRecordsScreen> with WidgetsBindingOb
             .map((room) => room.roomNumber)
             .toSet()
             .toList()
-            ..sort();
+          ..sort();
       }
-      
+
       // 检查当前选中的房间是否还在可用房间列表中
       if (_selectedRoom != null && !_availableRooms.contains(_selectedRoom)) {
         _selectedRoom = null;
       }
-      
+
       // 触发UI更新
       if (mounted) {
         setState(() {});
@@ -185,13 +190,13 @@ class _MyRecordsScreenState extends State<MyRecordsScreen> with WidgetsBindingOb
           .map((record) => record.floor)
           .toSet()
           .toList()
-          ..sort();
-      
+        ..sort();
+
       _availableRooms = _allRecords
           .map((record) => record.roomNumber)
           .toSet()
           .toList()
-          ..sort();
+        ..sort();
     }
 
     // 更新月份选项
@@ -199,8 +204,8 @@ class _MyRecordsScreenState extends State<MyRecordsScreen> with WidgetsBindingOb
         .map((record) => DateFormat('yyyy年MM月').format(record.timestamp))
         .toSet()
         .toList()
-        ..sort((a, b) => b.compareTo(a)); // 按时间倒序
-    
+      ..sort((a, b) => b.compareTo(a)); // 按时间倒序
+
     // 检查当前选中的月份是否还存在，如果不存在则重置
     if (_selectedMonth != null && !_availableMonths.contains(_selectedMonth)) {
       _selectedMonth = null;
@@ -214,17 +219,17 @@ class _MyRecordsScreenState extends State<MyRecordsScreen> with WidgetsBindingOb
         if (_selectedMeterType != null && record.meterType != _selectedMeterType) {
           return false;
         }
-        
+
         // 楼层筛选
         if (_selectedFloor != null && record.floor != _selectedFloor) {
           return false;
         }
-        
+
         // 房间筛选
         if (_selectedRoom != null && record.roomNumber != _selectedRoom) {
           return false;
         }
-        
+
         // 月份筛选
         if (_selectedMonth != null) {
           final recordMonth = DateFormat('yyyy年MM月').format(record.timestamp);
@@ -232,7 +237,7 @@ class _MyRecordsScreenState extends State<MyRecordsScreen> with WidgetsBindingOb
             return false;
           }
         }
-        
+
         return true;
       }).toList();
     });
@@ -253,7 +258,7 @@ class _MyRecordsScreenState extends State<MyRecordsScreen> with WidgetsBindingOb
   void _selectRecentMonths(int months) {
     final now = DateTime.now();
     final recentMonths = <String>[];
-    
+
     for (int i = 0; i < months; i++) {
       final date = DateTime(now.year, now.month - i, 1);
       final monthStr = DateFormat('yyyy年MM月').format(date);
@@ -261,7 +266,7 @@ class _MyRecordsScreenState extends State<MyRecordsScreen> with WidgetsBindingOb
         recentMonths.add(monthStr);
       }
     }
-    
+
     if (recentMonths.isNotEmpty) {
       // 这里可以扩展为多选，目前选择最近的一个月
       setState(() {
@@ -285,7 +290,7 @@ class _MyRecordsScreenState extends State<MyRecordsScreen> with WidgetsBindingOb
 
   void _selectLastMonth() {
     final lastMonth = DateFormat('yyyy年MM月').format(
-      DateTime(DateTime.now().year, DateTime.now().month - 1, 1)
+        DateTime(DateTime.now().year, DateTime.now().month - 1, 1)
     );
     if (_availableMonths.contains(lastMonth)) {
       setState(() {
@@ -301,8 +306,8 @@ class _MyRecordsScreenState extends State<MyRecordsScreen> with WidgetsBindingOb
     return ActionChip(
       label: Text(label),
       onPressed: onTap,
-      backgroundColor: isSelected 
-          ? AppTheme.primaryBlue 
+      backgroundColor: isSelected
+          ? AppTheme.primaryBlue
           : AppTheme.primaryBlue.withOpacity(0.1),
       labelStyle: TextStyle(
         color: isSelected ? Colors.white : AppTheme.primaryBlue,
@@ -365,19 +370,19 @@ class _MyRecordsScreenState extends State<MyRecordsScreen> with WidgetsBindingOb
 
   double? _calculateMonthlyUsage() {
     if (_filteredRecords.length < 2) return null;
-    
+
     // 按时间排序
     final sortedRecords = List<MeterRecord>.from(_filteredRecords)
       ..sort((a, b) => a.timestamp.compareTo(b.timestamp));
-    
+
     // 提取数值并计算差值
     final readings = sortedRecords.map((record) {
       final cleanReading = record.recognitionResult.replaceAll(RegExp(r'[^\d.]'), '');
       return double.tryParse(cleanReading) ?? 0.0;
     }).toList();
-    
+
     if (readings.length < 2) return null;
-    
+
     return readings.last - readings.first;
   }
 
@@ -409,13 +414,13 @@ class _MyRecordsScreenState extends State<MyRecordsScreen> with WidgetsBindingOb
   Future<void> _performDelete(MeterRecord record) async {
     try {
       await StorageService.deleteMeterRecord(record.id);
-      
+
       // 发布删除事件
       eventManager.publish(
         EventType.recordDeleted,
         data: {'record': record.toJson()},
       );
-      
+
       await _loadRecords();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('记录已删除')),
@@ -437,54 +442,54 @@ class _MyRecordsScreenState extends State<MyRecordsScreen> with WidgetsBindingOb
     }
     final List<String> meterTypes = allMeterTypes.toList()..sort();
     String selectedMeterType = record.meterType;
-    
+
     // 楼层和房间号选项
     List<int> availableFloors = [];
     List<String> availableRooms = [];
     int selectedFloor = record.floor;
     String selectedRoom = record.roomNumber;
-    
+
     // 获取可用楼层
     final allRooms = await StorageService.getRooms();
     availableFloors = allRooms.map((room) => room.floor).toSet().toList()..sort();
-    
+
     // 如果当前楼层不在可用楼层中，添加它
     if (!availableFloors.contains(selectedFloor)) {
       availableFloors.add(selectedFloor);
       availableFloors.sort();
     }
-    
+
     // 获取当前楼层的房间
     Future<void> updateAvailableRooms(int floor) async {
       final roomsForFloor = await StorageService.getRoomsByFloor(floor);
       final storageRooms = roomsForFloor.map((room) => room.roomNumber).toList();
-      
+
       // 从记录中获取该楼层的房间号
       final recordRooms = _allRecords
           .where((r) => r.floor == floor)
           .map((r) => r.roomNumber)
           .where((roomNumber) => roomNumber.isNotEmpty && !roomNumber.contains('_PLACEHOLDER_') && RegExp(r'^[0-9]+[A-Za-z]*$').hasMatch(roomNumber))
           .toSet();
-      
+
       // 合并房间信息并过滤无效数据
       final allRooms = {...storageRooms, ...recordRooms}
           .where((roomNumber) => roomNumber.isNotEmpty && !roomNumber.contains('_PLACEHOLDER_') && RegExp(r'^[0-9]+[A-Za-z]*$').hasMatch(roomNumber))
           .toList();
-      
+
       availableRooms = allRooms..sort();
-      
+
       // 如果当前房间号不在可用房间中且是有效的，添加它
-      if (!availableRooms.contains(selectedRoom) && 
-          selectedRoom.isNotEmpty && 
-          !selectedRoom.contains('_PLACEHOLDER_') && 
+      if (!availableRooms.contains(selectedRoom) &&
+          selectedRoom.isNotEmpty &&
+          !selectedRoom.contains('_PLACEHOLDER_') &&
           RegExp(r'^[0-9]+[A-Za-z]*$').hasMatch(selectedRoom)) {
         availableRooms.add(selectedRoom);
         availableRooms.sort();
       }
     }
-    
+
     await updateAvailableRooms(selectedFloor);
-    
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -533,7 +538,7 @@ class _MyRecordsScreenState extends State<MyRecordsScreen> with WidgetsBindingOb
                       ],
                     ),
                     SizedBox(height: 20),
-                    
+
                     // 表计类型选择
                     Text(
                       '表计类型',
@@ -581,7 +586,7 @@ class _MyRecordsScreenState extends State<MyRecordsScreen> with WidgetsBindingOb
                       ),
                     ),
                     SizedBox(height: 16),
-                    
+
                     // 楼层选择
                     Text(
                       '楼层',
@@ -639,7 +644,7 @@ class _MyRecordsScreenState extends State<MyRecordsScreen> with WidgetsBindingOb
                       ),
                     ),
                     SizedBox(height: 16),
-                    
+
                     // 房间号选择
                     Text(
                       '${selectedFloor}楼房间号',
@@ -658,67 +663,67 @@ class _MyRecordsScreenState extends State<MyRecordsScreen> with WidgetsBindingOb
                       ),
                       child: availableRooms.isEmpty
                           ? Padding(
-                              padding: EdgeInsets.symmetric(vertical: 16),
+                        padding: EdgeInsets.symmetric(vertical: 16),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.room,
+                              color: Colors.grey.shade400,
+                              size: 20,
+                            ),
+                            SizedBox(width: 8),
+                            Text(
+                              '该楼层暂无房间',
+                              style: TextStyle(
+                                color: Colors.grey.shade500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                          : DropdownButtonHideUnderline(
+                        child: DropdownButton<String>(
+                          value: (availableRooms.contains(selectedRoom) && selectedRoom.isNotEmpty) ? selectedRoom : null,
+                          isExpanded: true,
+                          hint: Row(
+                            children: [
+                              Icon(
+                                Icons.room,
+                                color: Colors.grey.shade400,
+                                size: 20,
+                              ),
+                              SizedBox(width: 8),
+                              Text('请选择房间号'),
+                            ],
+                          ),
+                          items: availableRooms.map((String room) {
+                            return DropdownMenuItem<String>(
+                              value: room,
                               child: Row(
                                 children: [
                                   Icon(
                                     Icons.room,
-                                    color: Colors.grey.shade400,
+                                    color: AppTheme.primaryBlue,
                                     size: 20,
                                   ),
                                   SizedBox(width: 8),
-                                  Text(
-                                    '该楼层暂无房间',
-                                    style: TextStyle(
-                                      color: Colors.grey.shade500,
-                                    ),
-                                  ),
+                                  Text(room),
                                 ],
                               ),
-                            )
-                          : DropdownButtonHideUnderline(
-                              child: DropdownButton<String>(
-                                value: (availableRooms.contains(selectedRoom) && selectedRoom.isNotEmpty) ? selectedRoom : null,
-                                isExpanded: true,
-                                hint: Row(
-                                  children: [
-                                    Icon(
-                                      Icons.room,
-                                      color: Colors.grey.shade400,
-                                      size: 20,
-                                    ),
-                                    SizedBox(width: 8),
-                                    Text('请选择房间号'),
-                                  ],
-                                ),
-                                items: availableRooms.map((String room) {
-                                  return DropdownMenuItem<String>(
-                                    value: room,
-                                    child: Row(
-                                      children: [
-                                        Icon(
-                                          Icons.room,
-                                          color: AppTheme.primaryBlue,
-                                          size: 20,
-                                        ),
-                                        SizedBox(width: 8),
-                                        Text(room),
-                                      ],
-                                    ),
-                                  );
-                                }).toList(),
-                                onChanged: (String? newValue) {
-                                  if (newValue != null) {
-                                    setModalState(() {
-                                      selectedRoom = newValue;
-                                    });
-                                  }
-                                },
-                              ),
-                            ),
+                            );
+                          }).toList(),
+                          onChanged: (String? newValue) {
+                            if (newValue != null) {
+                              setModalState(() {
+                                selectedRoom = newValue;
+                              });
+                            }
+                          },
+                        ),
+                      ),
                     ),
                     SizedBox(height: 24),
-                    
+
                     // 按钮
                     Row(
                       children: [
@@ -742,7 +747,7 @@ class _MyRecordsScreenState extends State<MyRecordsScreen> with WidgetsBindingOb
                                 );
                                 return;
                               }
-                              
+
                               // 创建更新的记录
                               final updatedRecord = MeterRecord(
                                 id: record.id,
@@ -759,20 +764,20 @@ class _MyRecordsScreenState extends State<MyRecordsScreen> with WidgetsBindingOb
                                 recognitionDetails: record.recognitionDetails,
                                 isManuallyEdited: true, // 标记为手动编辑
                               );
-                              
+
                               try {
                                 // 更新记录
                                 await StorageService.updateMeterRecord(updatedRecord);
-                                
+
                                 // 发布更新事件
                                 eventManager.publish(
                                   EventType.recordUpdated,
                                   data: {'record': updatedRecord.toJson()},
                                 );
-                                
+
                                 // 重新加载数据
                                 await _loadRecords();
-                                
+
                                 Navigator.of(context).pop();
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(content: Text('记录更新成功')),
@@ -806,15 +811,15 @@ class _MyRecordsScreenState extends State<MyRecordsScreen> with WidgetsBindingOb
   // 提取主要读数
   String _extractMainReading(String recognitionResult) {
     if (recognitionResult.isEmpty) return '未识别';
-    
+
     // 尝试提取数字部分
     final RegExp numberRegex = RegExp(r'\d+\.?\d*');
     final match = numberRegex.firstMatch(recognitionResult);
-    
+
     if (match != null) {
       return match.group(0) ?? recognitionResult;
     }
-    
+
     return recognitionResult;
   }
 
@@ -894,33 +899,33 @@ class _MyRecordsScreenState extends State<MyRecordsScreen> with WidgetsBindingOb
                             borderRadius: BorderRadius.circular(12),
                             child: record.imagePath.startsWith('http')
                                 ? Image.network(
-                                    record.imagePath,
-                                    fit: BoxFit.cover,
-                                    errorBuilder: (context, error, stackTrace) {
-                                      return Container(
-                                        color: Colors.grey.shade200,
-                                        child: Icon(
-                                          Icons.broken_image,
-                                          color: Colors.grey.shade400,
-                                          size: 60,
-                                        ),
-                                      );
-                                    },
-                                  )
-                                : Image.file(
-                                    File(record.imagePath),
-                                    fit: BoxFit.cover,
-                                    errorBuilder: (context, error, stackTrace) {
-                                      return Container(
-                                        color: Colors.grey.shade200,
-                                        child: Icon(
-                                          Icons.image_not_supported,
-                                          color: Colors.grey.shade400,
-                                          size: 60,
-                                        ),
-                                      );
-                                    },
+                              record.imagePath,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) {
+                                return Container(
+                                  color: Colors.grey.shade200,
+                                  child: Icon(
+                                    Icons.broken_image,
+                                    color: Colors.grey.shade400,
+                                    size: 60,
                                   ),
+                                );
+                              },
+                            )
+                                : Image.file(
+                              File(record.imagePath),
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) {
+                                return Container(
+                                  color: Colors.grey.shade200,
+                                  child: Icon(
+                                    Icons.image_not_supported,
+                                    color: Colors.grey.shade400,
+                                    size: 60,
+                                  ),
+                                );
+                              },
+                            ),
                           ),
                         ),
                         SizedBox(height: 20),
@@ -1298,7 +1303,7 @@ class _MyRecordsScreenState extends State<MyRecordsScreen> with WidgetsBindingOb
       ],
     );
   }
-  
+
   // 辅助方法：根据置信度返回颜色
   Color _getConfidenceColor(double probability) {
     if (probability >= 0.9) {
@@ -1349,7 +1354,7 @@ class _MyRecordsScreenState extends State<MyRecordsScreen> with WidgetsBindingOb
                     ),
                     Spacer(),
                     // 显示当前筛选状态
-                    if (_selectedMeterType != null || _selectedFloor != null || 
+                    if (_selectedMeterType != null || _selectedFloor != null ||
                         _selectedRoom != null || _selectedMonth != null)
                       Container(
                         padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -1375,7 +1380,7 @@ class _MyRecordsScreenState extends State<MyRecordsScreen> with WidgetsBindingOb
               ),
             ),
           ),
-          
+
           // 筛选内容区域 - 根据展开状态显示
           AnimatedContainer(
             duration: Duration(milliseconds: 300),
@@ -1415,66 +1420,66 @@ class _MyRecordsScreenState extends State<MyRecordsScreen> with WidgetsBindingOb
                           spacing: AppTheme.spacingM,
                           runSpacing: AppTheme.spacingM,
                           children: [
-                      // 表计类型筛选
-                      _buildFilterDropdown(
-                        label: '表计类型',
-                        value: _selectedMeterType,
-                        items: _availableMeterTypes,
-                        onChanged: (value) {
-                          setState(() {
-                            _selectedMeterType = value;
-                          });
-                          _applyFilters();
-                        },
-                      ),
-                      
-                      // 楼层筛选
-                      _buildFilterDropdown(
-                        label: '楼层',
-                        value: _selectedFloor?.toString(),
-                        items: _availableFloors.map((f) => f.toString()).toSet().toList(),
-                        onChanged: (value) {
-                          setState(() {
-                            _selectedFloor = value != null ? int.parse(value) : null;
-                            _selectedRoom = null; // 清除房间选择
-                          });
-                          _updateFilterOptions(); // 更新房间选项
-                          _applyFilters();
-                        },
-                      ),
-                      
-                      // 房间筛选
-                      _buildFilterDropdown(
-                        label: _selectedFloor == null ? '房间号（请先选择楼层）' : '房间号',
-                        value: _selectedRoom,
-                        items: _availableRooms,
-                        enabled: _selectedFloor != null && _availableRooms.isNotEmpty,
-                        onChanged: (value) {
-                          setState(() {
-                            _selectedRoom = value;
-                          });
-                          _applyFilters();
-                        },
-                      ),
-                      
-                      // 月份筛选
-                      _buildFilterDropdown(
-                        label: '月份',
-                        value: _selectedMonth,
-                        items: _availableMonths,
-                        onChanged: (value) {
-                          setState(() {
-                            _selectedMonth = value;
-                            _selectedQuickFilter = null; // 手动选择时清除快捷选择状态
-                          });
-                          _applyFilters();
-                        },
-                      ),
+                            // 表计类型筛选
+                            _buildFilterDropdown(
+                              label: '表计类型',
+                              value: _selectedMeterType,
+                              items: _availableMeterTypes,
+                              onChanged: (value) {
+                                setState(() {
+                                  _selectedMeterType = value;
+                                });
+                                _applyFilters();
+                              },
+                            ),
+
+                            // 楼层筛选
+                            _buildFilterDropdown(
+                              label: '楼层',
+                              value: _selectedFloor?.toString(),
+                              items: _availableFloors.map((f) => f.toString()).toSet().toList(),
+                              onChanged: (value) {
+                                setState(() {
+                                  _selectedFloor = value != null ? int.parse(value) : null;
+                                  _selectedRoom = null; // 清除房间选择
+                                });
+                                _updateFilterOptions(); // 更新房间选项
+                                _applyFilters();
+                              },
+                            ),
+
+                            // 房间筛选
+                            _buildFilterDropdown(
+                              label: _selectedFloor == null ? '房间号（请先选择楼层）' : '房间号',
+                              value: _selectedRoom,
+                              items: _availableRooms,
+                              enabled: _selectedFloor != null && _availableRooms.isNotEmpty,
+                              onChanged: (value) {
+                                setState(() {
+                                  _selectedRoom = value;
+                                });
+                                _applyFilters();
+                              },
+                            ),
+
+                            // 月份筛选
+                            _buildFilterDropdown(
+                              label: '月份',
+                              value: _selectedMonth,
+                              items: _availableMonths,
+                              onChanged: (value) {
+                                setState(() {
+                                  _selectedMonth = value;
+                                  _selectedQuickFilter = null; // 手动选择时清除快捷选择状态
+                                });
+                                _applyFilters();
+                              },
+                            ),
                           ],
                         ),
-                        
+
                         SizedBox(height: AppTheme.spacingM),
-                        
+
                         // 月份快捷选项
                         Text(
                           '快捷选择',
@@ -1494,11 +1499,11 @@ class _MyRecordsScreenState extends State<MyRecordsScreen> with WidgetsBindingOb
                             _buildQuickFilterChip('上月', () => _selectLastMonth()),
                           ],
                         ),
-                        
-                        if (_selectedMeterType != null || _selectedFloor != null || 
+
+                        if (_selectedMeterType != null || _selectedFloor != null ||
                             _selectedRoom != null || _selectedMonth != null) ...[
                           SizedBox(height: AppTheme.spacingM),
-                          
+
                           // 操作按钮
                           Row(
                             children: [
@@ -1526,7 +1531,7 @@ class _MyRecordsScreenState extends State<MyRecordsScreen> with WidgetsBindingOb
               ),
             ) : SizedBox.shrink(),
           ),
-          
+
           // 用量统计
           if (_selectedMonth != null && _filteredRecords.isNotEmpty) ...[
             Container(
@@ -1607,7 +1612,7 @@ class _MyRecordsScreenState extends State<MyRecordsScreen> with WidgetsBindingOb
           return DropdownMenuItem<String>(
             value: item,
             child: Text(
-              item, 
+              item,
               style: TextStyle(
                 fontSize: AppTheme.fontSizeBody,
                 color: enabled ? AppTheme.textPrimary : Colors.grey.shade400,
@@ -1652,351 +1657,346 @@ class _MyRecordsScreenState extends State<MyRecordsScreen> with WidgetsBindingOb
         children: [
           // 筛选区域
           _buildFilterChips(),
-          
+
           // 记录列表
           Expanded(
             child: _isLoading
                 ? Center(child: CircularProgressIndicator())
                 : _filteredRecords.isEmpty
-                    ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.inbox_outlined,
-                              size: 64,
-                              color: Colors.grey.shade400,
+                ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.inbox_outlined,
+                    size: 64,
+                    color: Colors.grey.shade400,
+                  ),
+                  SizedBox(height: 16),
+                  Text(
+                    '暂无记录',
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: Colors.grey.shade600,
+                    ),
+                  ),
+                ],
+              ),
+            )
+                : RefreshIndicator(
+              onRefresh: _loadRecords,
+              child: ListView.builder(
+                padding: EdgeInsets.all(16),
+                itemCount: _filteredRecords.length,
+                itemBuilder: (context, index) {
+                  final record = _filteredRecords[index];
+                  return Container(
+                    margin: EdgeInsets.only(bottom: 16),
+                    child: Material(
+                      elevation: 4,
+                      shadowColor: Colors.black.withOpacity(0.08),
+                      borderRadius: BorderRadius.circular(16),
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(16),
+                        onTap: () => _showRecordDetail(record),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(20),
+                            gradient: LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [
+                                Colors.white,
+                                Colors.grey.shade50,
+                              ],
                             ),
-                            SizedBox(height: 16),
-                            Text(
-                              '暂无记录',
-                              style: TextStyle(
-                                fontSize: 16,
-                                color: Colors.grey.shade600,
-                              ),
-                            ),
-                          ],
-                        ),
-                      )
-                    : RefreshIndicator(
-                        onRefresh: _loadRecords,
-                        child: ListView.builder(
-                          padding: EdgeInsets.all(16),
-                          itemCount: _filteredRecords.length,
-                          itemBuilder: (context, index) {
-                            final record = _filteredRecords[index];
-                            return Container(
-                              margin: EdgeInsets.only(bottom: 16),
-                              child: Material(
-                                elevation: 4,
-                                shadowColor: Colors.black.withOpacity(0.08),
-                                borderRadius: BorderRadius.circular(16),
-                                child: InkWell(
-                                  borderRadius: BorderRadius.circular(16),
-                                  onTap: () => _showRecordDetail(record),
-                                  child: Container(
-                                    decoration: BoxDecoration(
-                                      borderRadius: BorderRadius.circular(20),
-                                      gradient: LinearGradient(
-                                        begin: Alignment.topLeft,
-                                        end: Alignment.bottomRight,
-                                        colors: [
-                                          Colors.white,
-                                          Colors.grey.shade50,
+
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                // 顶部信息行
+                                Row(
+                                  children: [
+                                    // 表计类型标签 - 更大更醒目
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 16,
+                                        vertical: 8,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        gradient: LinearGradient(
+                                          colors: [
+                                            _getMeterTypeColor(record.meterType),
+                                            _getMeterTypeColor(record.meterType).withOpacity(0.8),
+                                          ],
+                                        ),
+                                        borderRadius: BorderRadius.circular(25),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: _getMeterTypeColor(record.meterType).withOpacity(0.3),
+                                            blurRadius: 8,
+                                            offset: const Offset(0, 2),
+                                          ),
                                         ],
                                       ),
-
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(
+                                            _getMeterTypeIcon(record.meterType),
+                                            size: 18,
+                                            color: Colors.white,
+                                          ),
+                                          const SizedBox(width: 6),
+                                          Text(
+                                            record.meterType,
+                                            style: const TextStyle(
+                                              fontSize: 13,
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.white,
+                                              letterSpacing: 0.5,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
                                     ),
-                                    child: Padding(
-                                      padding: const EdgeInsets.all(16),
+                                    Spacer(),
+                                    // 时间标签
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 12,
+                                        vertical: 6,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: Colors.grey.shade100,
+                                        borderRadius: BorderRadius.circular(15),
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(
+                                            Icons.schedule,
+                                            size: 14,
+                                            color: Colors.grey.shade600,
+                                          ),
+                                          SizedBox(width: 4),
+                                          Text(
+                                            DateFormat('MM-dd HH:mm').format(record.timestamp),
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              color: Colors.grey.shade600,
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    SizedBox(width: 8),
+                                    // 编辑按钮
+                                    Container(
+                                      decoration: BoxDecoration(
+                                        color: Colors.blue.shade50,
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      child: IconButton(
+                                        icon: Icon(Icons.edit_outlined),
+                                        color: Colors.blue.shade400,
+                                        iconSize: 16,
+                                        onPressed: () => _editRecord(record),
+                                        padding: EdgeInsets.all(4),
+                                        constraints: BoxConstraints(),
+                                      ),
+                                    ),
+                                    SizedBox(width: 8),
+                                    // 删除按钮
+                                    Container(
+                                      decoration: BoxDecoration(
+                                        color: Colors.red.shade50,
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      child: IconButton(
+                                        icon: Icon(Icons.delete_outline),
+                                        color: Colors.red.shade400,
+                                        iconSize: 16,
+                                        onPressed: () => _deleteRecord(record),
+                                        padding: EdgeInsets.all(4),
+                                        constraints: BoxConstraints(),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+
+                                SizedBox(height: 12),
+
+                                // 主要内容区域
+                                Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    // 左侧图片 - 优化尺寸
+                                    if (record.imagePath.isNotEmpty) ...[
+                                      Container(
+                                        width: 80,
+                                        height: 80,
+                                        decoration: BoxDecoration(
+                                          borderRadius: BorderRadius.circular(12),
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: Colors.black.withOpacity(0.08),
+                                              blurRadius: 6,
+                                              offset: Offset(0, 2),
+                                            ),
+                                          ],
+                                        ),
+                                        child: ClipRRect(
+                                          borderRadius: BorderRadius.circular(12),
+                                          child: record.imagePath.startsWith('http')
+                                              ? Image.network(
+                                            record.imagePath,
+                                            fit: BoxFit.cover,
+                                            errorBuilder: (context, error, stackTrace) {
+                                              return Container(
+                                                color: Colors.grey.shade200,
+                                                child: Icon(
+                                                  Icons.broken_image,
+                                                  color: Colors.grey.shade400,
+                                                  size: 32,
+                                                ),
+                                              );
+                                            },
+                                          )
+                                              : Image.file(
+                                            File(record.imagePath),
+                                            fit: BoxFit.cover,
+                                            errorBuilder: (context, error, stackTrace) {
+                                              return Container(
+                                                color: Colors.grey.shade200,
+                                                child: Icon(
+                                                  Icons.image_not_supported,
+                                                  color: Colors.grey.shade400,
+                                                  size: 32,
+                                                ),
+                                              );
+                                            },
+                                          ),
+                                        ),
+                                      ),
+                                      SizedBox(width: 12),
+                                    ],
+
+                                    // 右侧信息
+                                    Expanded(
                                       child: Column(
                                         crossAxisAlignment: CrossAxisAlignment.start,
                                         children: [
-                                          // 顶部信息行
+                                          // 读数显示 - 紧凑设计
                                           Row(
                                             children: [
-                                              // 表计类型标签 - 更大更醒目
                                               Container(
-                                                padding: const EdgeInsets.symmetric(
-                                                  horizontal: 16,
-                                                  vertical: 8,
-                                                ),
+                                                padding: EdgeInsets.all(4),
                                                 decoration: BoxDecoration(
-                                                  gradient: LinearGradient(
-                                                    colors: [
-                                                      _getMeterTypeColor(record.meterType),
-                                                      _getMeterTypeColor(record.meterType).withOpacity(0.8),
-                                                    ],
+                                                  color: AppTheme.primaryBlue,
+                                                  borderRadius: BorderRadius.circular(6),
+                                                ),
+                                                child: Icon(
+                                                  Icons.speed,
+                                                  size: 14,
+                                                  color: Colors.white,
+                                                ),
+                                              ),
+                                              SizedBox(width: 8),
+                                              Text(
+                                                '读数',
+                                                style: TextStyle(
+                                                  fontSize: 12,
+                                                  color: Colors.grey.shade600,
+                                                  fontWeight: FontWeight.w500,
+                                                ),
+                                              ),
+                                              SizedBox(width: 8),
+                                              Expanded(
+                                                child: Text(
+                                                  _extractMainReading(record.recognitionResult),
+                                                  style: TextStyle(
+                                                    fontSize: 18,
+                                                    fontWeight: FontWeight.bold,
+                                                    color: AppTheme.primaryBlue,
+                                                    letterSpacing: 0.3,
                                                   ),
-                                                  borderRadius: BorderRadius.circular(25),
-                                                  boxShadow: [
-                                                    BoxShadow(
-                                                      color: _getMeterTypeColor(record.meterType).withOpacity(0.3),
-                                                      blurRadius: 8,
-                                                      offset: const Offset(0, 2),
-                                                    ),
-                                                  ],
-                                                ),
-                                                child: Row(
-                                                  mainAxisSize: MainAxisSize.min,
-                                                  children: [
-                                                    Icon(
-                                                      _getMeterTypeIcon(record.meterType),
-                                                      size: 18,
-                                                      color: Colors.white,
-                                                    ),
-                                                    const SizedBox(width: 6),
-                                                    Text(
-                                                      record.meterType,
-                                                      style: const TextStyle(
-                                                        fontSize: 13,
-                                                        fontWeight: FontWeight.bold,
-                                                        color: Colors.white,
-                                                        letterSpacing: 0.5,
-                                                      ),
-                                                    ),
-                                                  ],
-                                                ),
-                                              ),
-                                              Spacer(),
-                                              // 时间标签
-                                              Container(
-                                                padding: const EdgeInsets.symmetric(
-                                                  horizontal: 12,
-                                                  vertical: 6,
-                                                ),
-                                                decoration: BoxDecoration(
-                                                  color: Colors.grey.shade100,
-                                                  borderRadius: BorderRadius.circular(15),
-                                                ),
-                                                child: Row(
-                                                  mainAxisSize: MainAxisSize.min,
-                                                  children: [
-                                                    Icon(
-                                                      Icons.schedule,
-                                                      size: 14,
-                                                      color: Colors.grey.shade600,
-                                                    ),
-                                                    SizedBox(width: 4),
-                                                    Text(
-                                                      DateFormat('MM-dd HH:mm').format(record.timestamp),
-                                                      style: TextStyle(
-                                                        fontSize: 12,
-                                                        color: Colors.grey.shade600,
-                                                        fontWeight: FontWeight.w500,
-                                                      ),
-                                                    ),
-                                                  ],
-                                                ),
-                                              ),
-                                              SizedBox(width: 8),
-                                              // 编辑按钮
-                                              Container(
-                                                decoration: BoxDecoration(
-                                                  color: Colors.blue.shade50,
-                                                  borderRadius: BorderRadius.circular(12),
-                                                ),
-                                                child: IconButton(
-                                                  icon: Icon(Icons.edit_outlined),
-                                                  color: Colors.blue.shade400,
-                                                  iconSize: 16,
-                                                  onPressed: () => _editRecord(record),
-                                                  padding: EdgeInsets.all(4),
-                                                  constraints: BoxConstraints(),
-                                                ),
-                                              ),
-                                              SizedBox(width: 8),
-                                              // 删除按钮
-                                              Container(
-                                                decoration: BoxDecoration(
-                                                  color: Colors.red.shade50,
-                                                  borderRadius: BorderRadius.circular(12),
-                                                ),
-                                                child: IconButton(
-                                                  icon: Icon(Icons.delete_outline),
-                                                  color: Colors.red.shade400,
-                                                  iconSize: 16,
-                                                  onPressed: () => _deleteRecord(record),
-                                                  padding: EdgeInsets.all(4),
-                                                  constraints: BoxConstraints(),
+                                                  textAlign: TextAlign.right,
                                                 ),
                                               ),
                                             ],
                                           ),
-                                          
-                                          SizedBox(height: 12),
-                                          
-                                          // 主要内容区域
+
+                                          SizedBox(height: 8),
+
+                                          // 位置信息 - 紧凑布局
                                           Row(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
                                             children: [
-                                              // 左侧图片 - 优化尺寸
-                                              if (record.imagePath.isNotEmpty) ...[
-                                                Container(
-                                                  width: 80,
-                                                  height: 80,
-                                                  decoration: BoxDecoration(
-                                                    borderRadius: BorderRadius.circular(12),
-                                                    boxShadow: [
-                                                      BoxShadow(
-                                                        color: Colors.black.withOpacity(0.08),
-                                                        blurRadius: 6,
-                                                        offset: Offset(0, 2),
-                                                      ),
-                                                    ],
-                                                  ),
-                                                  child: ClipRRect(
-                                                    borderRadius: BorderRadius.circular(12),
-                                                    child: record.imagePath.startsWith('http') 
-                                                      ? Image.network(
-                                                          record.imagePath,
-                                                          fit: BoxFit.cover,
-                                                          errorBuilder: (context, error, stackTrace) {
-                                                            return Container(
-                                                              color: Colors.grey.shade200,
-                                                              child: Icon(
-                                                                Icons.broken_image,
-                                                                color: Colors.grey.shade400,
-                                                                size: 32,
-                                                              ),
-                                                            );
-                                                          },
-                                                        )
-                                                      : Image.file(
-                                                          File(record.imagePath),
-                                                          fit: BoxFit.cover,
-                                                          errorBuilder: (context, error, stackTrace) {
-                                                            return Container(
-                                                              color: Colors.grey.shade200,
-                                                              child: Icon(
-                                                                Icons.image_not_supported,
-                                                                color: Colors.grey.shade400,
-                                                                size: 32,
-                                                              ),
-                                                            );
-                                                          },
-                                                        ),
-                                                  ),
+                                              Container(
+                                                padding: EdgeInsets.all(4),
+                                                decoration: BoxDecoration(
+                                                  color: Colors.green.shade600,
+                                                  borderRadius: BorderRadius.circular(6),
                                                 ),
-                                                SizedBox(width: 12),
-                                              ],
-                                              
-                                              // 右侧信息
+                                                child: Icon(
+                                                  Icons.location_on,
+                                                  size: 14,
+                                                  color: Colors.white,
+                                                ),
+                                              ),
+                                              SizedBox(width: 8),
+                                              Text(
+                                                '位置',
+                                                style: TextStyle(
+                                                  fontSize: 12,
+                                                  color: Colors.grey.shade600,
+                                                  fontWeight: FontWeight.w500,
+                                                ),
+                                              ),
+                                              SizedBox(width: 8),
                                               Expanded(
-                                                child: Column(
-                                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                                child: Text(
+                                                  '${record.floor}楼 ${record.roomNumber}',
+                                                  style: TextStyle(
+                                                    fontSize: 14,
+                                                    fontWeight: FontWeight.w600,
+                                                    color: Colors.green.shade800,
+                                                  ),
+                                                  textAlign: TextAlign.right,
+                                                ),
+                                              ),
+                                              SizedBox(width: 8),
+                                              // 查看详情提示
+                                              Container(
+                                                padding: EdgeInsets.symmetric(
+                                                  horizontal: 6,
+                                                  vertical: 2,
+                                                ),
+                                                decoration: BoxDecoration(
+                                                  color: Colors.blue.shade100,
+                                                  borderRadius: BorderRadius.circular(8),
+                                                ),
+                                                child: Row(
+                                                  mainAxisSize: MainAxisSize.min,
                                                   children: [
-                                                    // 读数显示 - 紧凑设计
-                                                    Row(
-                                                      children: [
-                                                        Container(
-                                                          padding: EdgeInsets.all(4),
-                                                          decoration: BoxDecoration(
-                                                            color: AppTheme.primaryBlue,
-                                                            borderRadius: BorderRadius.circular(6),
-                                                          ),
-                                                          child: Icon(
-                                                            Icons.speed,
-                                                            size: 14,
-                                                            color: Colors.white,
-                                                          ),
-                                                        ),
-                                                        SizedBox(width: 8),
-                                                        Text(
-                                                          '读数',
-                                                          style: TextStyle(
-                                                            fontSize: 12,
-                                                            color: Colors.grey.shade600,
-                                                            fontWeight: FontWeight.w500,
-                                                          ),
-                                                        ),
-                                                        SizedBox(width: 8),
-                                                        Expanded(
-                                                          child: Text(
-                                                            _extractMainReading(record.recognitionResult),
-                                                            style: TextStyle(
-                                                              fontSize: 18,
-                                                              fontWeight: FontWeight.bold,
-                                                              color: AppTheme.primaryBlue,
-                                                              letterSpacing: 0.3,
-                                                            ),
-                                                            textAlign: TextAlign.right,
-                                                          ),
-                                                        ),
-                                                      ],
-                                                    ),
-                                                    
-                                                    SizedBox(height: 8),
-                                                    
-                                                    // 位置信息 - 紧凑布局
-                                                    Row(
-                                                      children: [
-                                                        Container(
-                                                          padding: EdgeInsets.all(4),
-                                                          decoration: BoxDecoration(
-                                                            color: Colors.green.shade600,
-                                                            borderRadius: BorderRadius.circular(6),
-                                                          ),
-                                                          child: Icon(
-                                                            Icons.location_on,
-                                                            size: 14,
-                                                            color: Colors.white,
-                                                          ),
-                                                        ),
-                                                        SizedBox(width: 8),
-                                                        Text(
-                                                          '位置',
-                                                          style: TextStyle(
-                                                            fontSize: 12,
-                                                            color: Colors.grey.shade600,
-                                                            fontWeight: FontWeight.w500,
-                                                          ),
-                                                        ),
-                                                        SizedBox(width: 8),
-                                                        Expanded(
-                                                          child: Text(
-                                                            '${record.floor}楼 ${record.roomNumber}',
-                                                            style: TextStyle(
-                                                              fontSize: 14,
-                                                              fontWeight: FontWeight.w600,
-                                                              color: Colors.green.shade800,
-                                                            ),
-                                                            textAlign: TextAlign.right,
-                                                          ),
-                                                        ),
-                                                        SizedBox(width: 8),
-                                                        // 查看详情提示
-                                                        Container(
-                                                          padding: EdgeInsets.symmetric(
-                                                            horizontal: 6,
-                                                            vertical: 2,
-                                                          ),
-                                                          decoration: BoxDecoration(
-                                                            color: Colors.blue.shade100,
-                                                            borderRadius: BorderRadius.circular(8),
-                                                          ),
-                                                          child: Row(
-                                                            mainAxisSize: MainAxisSize.min,
-                                                            children: [
-                                                              Text(
-                                                                '详情',
-                                                                style: TextStyle(
-                                                                  fontSize: 10,
-                                                                  color: Colors.blue.shade700,
-                                                                  fontWeight: FontWeight.w600,
-                                                                ),
-                                                                ),
-                                                                SizedBox(width: 2),
-                                                                Icon(
-                                                                  Icons.arrow_forward_ios,
-                                                                  size: 10,
-                                                                  color: Colors.blue.shade700,
-                                                                ),
-                                                              ],
-                                                            ),
-                                                          ),
-                                                        ],
+                                                    Text(
+                                                      '详情',
+                                                      style: TextStyle(
+                                                        fontSize: 10,
+                                                        color: Colors.blue.shade700,
+                                                        fontWeight: FontWeight.w600,
                                                       ),
+                                                    ),
+                                                    SizedBox(width: 2),
+                                                    Icon(
+                                                      Icons.arrow_forward_ios,
+                                                      size: 10,
+                                                      color: Colors.blue.shade700,
+                                                    ),
                                                   ],
                                                 ),
                                               ),
@@ -2005,13 +2005,18 @@ class _MyRecordsScreenState extends State<MyRecordsScreen> with WidgetsBindingOb
                                         ],
                                       ),
                                     ),
-                                  ),
+                                  ],
                                 ),
-                              ),
-                            );
-                          },
+                              ],
+                            ),
+                          ),
                         ),
                       ),
+                    ),
+                  );
+                },
+              ),
+            ),
           ),
         ],
       ),
