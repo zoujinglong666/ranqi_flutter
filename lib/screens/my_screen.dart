@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 import 'management_screen.dart';
 import 'all_records_screen.dart';
+import '../services/storage_service.dart';
 
 class MyScreen extends StatefulWidget {
   @override
@@ -10,165 +11,442 @@ class MyScreen extends StatefulWidget {
 }
 
 class _MyScreenState extends State<MyScreen> {
+  int _totalRecords = 0;
+  int _thisMonthRecords = 0;
+  int _totalRooms = 0;
+  bool _isLoading = true;
+
   @override
   void initState() {
     super.initState();
+    _loadStatistics();
+  }
+
+  // 构建统计卡片
+  Widget _buildStatisticsCards() {
+    return Row(
+      children: [
+        Expanded(
+          child: _buildStatCard(
+            title: '总记录',
+            value: _isLoading ? '--' : _totalRecords.toString(),
+            icon: Icons.assessment_rounded,
+            color: Colors.white,
+            textColor: AppTheme.primaryBlue,
+          ),
+        ),
+        SizedBox(width: 12),
+        Expanded(
+          child: _buildStatCard(
+            title: '本月',
+            value: _isLoading ? '--' : _thisMonthRecords.toString(),
+            icon: Icons.calendar_today_rounded,
+            color: Colors.white,
+            textColor: Colors.green.shade600,
+          ),
+        ),
+        SizedBox(width: 12),
+        Expanded(
+          child: _buildStatCard(
+            title: '房间数',
+            value: _isLoading ? '--' : _totalRooms.toString(),
+            icon: Icons.home_rounded,
+            color: Colors.white,
+            textColor: Colors.orange.shade600,
+          ),
+        ),
+      ],
+    );
+  }
+
+  // 构建统计卡片
+  Widget _buildStatCard({
+    required String title,
+    required String value,
+    required IconData icon,
+    required Color color,
+    required Color textColor,
+  }) {
+    return Container(
+      padding: EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 10,
+            offset: Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Icon(
+            icon,
+            color: textColor,
+            size: 24,
+          ),
+          SizedBox(height: 8),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: textColor,
+            ),
+          ),
+          SizedBox(height: 4),
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 12,
+              color: textColor.withOpacity(0.7),
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // 构建现代化功能组
+  Widget _buildModernFunctionGroup(List<Widget> children) {
+    return Column(
+      children: children.map((child) => Padding(
+        padding: EdgeInsets.only(bottom: 12),
+        child: child,
+      )).toList(),
+    );
+  }
+
+  // 构建现代化功能项
+  Widget _buildModernFunctionItem({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
+    required Color color,
+    required Gradient gradient,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: color.withOpacity(0.3),
+            blurRadius: 15,
+            offset: Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(20),
+          onTap: onTap,
+          child: Container(
+            padding: EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              gradient: gradient,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 50,
+                  height: 50,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(15),
+                  ),
+                  child: Icon(
+                    icon,
+                    color: Colors.white,
+                    size: 24,
+                  ),
+                ),
+                SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                      SizedBox(height: 4),
+                      Text(
+                        subtitle,
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.white.withOpacity(0.9),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  width: 30,
+                  height: 30,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(
+                    Icons.arrow_forward_ios_rounded,
+                    size: 14,
+                    color: Colors.white,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _loadStatistics() async {
+    try {
+      final records = await StorageService.getMeterRecords();
+      final rooms = await StorageService.getRooms();
+      
+      final now = DateTime.now();
+      final thisMonth = records.where((record) {
+        return record.timestamp.year == now.year && 
+               record.timestamp.month == now.month;
+      }).length;
+      
+      setState(() {
+        _totalRecords = records.length;
+        _thisMonthRecords = thisMonth;
+        _totalRooms = rooms.length;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
-      body: CustomScrollView(
-        slivers: [
-          // 个人中心头部
-          SliverAppBar(
-            expandedHeight: 200,
-            floating: false,
-            pinned: true,
-            backgroundColor: AppTheme.primaryBlue,
-            flexibleSpace: FlexibleSpaceBar(
-              background: Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      AppTheme.primaryBlue,
-                      AppTheme.primaryBlue.withOpacity(0.8),
-                    ],
-                  ),
-                ),
-                child: SafeArea(
-                  child: Padding(
-                    padding: EdgeInsets.all(20),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        // 头像
-                        Container(
-                          width: 80,
-                          height: 80,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: Colors.white,
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.1),
-                                blurRadius: 10,
-                                offset: Offset(0, 4),
-                              ),
-                            ],
-                          ),
-                          child: Icon(
-                            Icons.person,
-                            size: 40,
-                            color: AppTheme.primaryBlue,
-                          ),
-                        ),
-                        SizedBox(height: 16),
-                        // 用户名
-                        Text(
-                          '用户',
-                          style: TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                        ),
-                        SizedBox(height: 8),
-                        // 状态
-                        Container(
-                          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.2),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Text(
-                            '已登录',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ),
+      body: RefreshIndicator(
+        onRefresh: _loadStatistics,
+        child: CustomScrollView(
+          slivers: [
+            // 个人中心头部
+            SliverAppBar(
+              expandedHeight: 280,
+              floating: false,
+              pinned: true,
+              backgroundColor: AppTheme.primaryBlue,
+              elevation: 0,
+              flexibleSpace: FlexibleSpaceBar(
+                background: Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        AppTheme.primaryBlue,
+                        AppTheme.primaryBlue.withOpacity(0.8),
+                        Colors.blue.shade600,
                       ],
                     ),
                   ),
+                  child: SafeArea(
+                    child: Padding(
+                      padding: EdgeInsets.fromLTRB(20, 40, 20, 20),
+                      child: Column(
+                        children: [
+                          // 个人信息区域
+                          Row(
+                            children: [
+                              // 头像
+                              Container(
+                                width: 70,
+                                height: 70,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: Colors.white,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.15),
+                                      blurRadius: 15,
+                                      offset: Offset(0, 5),
+                                    ),
+                                  ],
+                                ),
+                                child: Icon(
+                                  Icons.person,
+                                  size: 35,
+                                  color: AppTheme.primaryBlue,
+                                ),
+                              ),
+                              SizedBox(width: 16),
+                              // 用户信息
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      '燃气表管理员',
+                                      style: TextStyle(
+                                        fontSize: 22,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                    SizedBox(height: 4),
+                                    Container(
+                                      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white.withOpacity(0.25),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: Text(
+                                        '在线',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              // 设置按钮
+                              Container(
+                                width: 40,
+                                height: 40,
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.2),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Icon(
+                                  Icons.settings,
+                                  color: Colors.white,
+                                  size: 20,
+                                ),
+                              ),
+                            ],
+                          ),
+                          SizedBox(height: 30),
+                          // 统计卡片
+                          _buildStatisticsCards(),
+                        ],
+                      ),
+                    ),
+                  ),
                 ),
               ),
             ),
-          ),
-          
-          // 功能列表
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: EdgeInsets.all(16),
-              child: Column(
-                children: [
-
-                  
-                  // 功能组
-                  _buildFunctionGroup([
-                    _buildFunctionItem(
-                      icon: Icons.history,
-                      title: '识别记录',
-                      subtitle: '查看所有识别记录',
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (context) => AllRecordsScreen()),
-                        );
-                      },
-                      color: Colors.blue,
+            
+            // 功能列表
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '功能中心',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.grey.shade800,
+                      ),
                     ),
-                    _buildDivider(),
-                    _buildFunctionItem(
-                      icon: Icons.business,
-                      title: '管理中心',
-                      subtitle: '楼层房间管理',
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (context) => ManagementScreen()),
-                        );
-                      },
-                      color: Colors.green,
+                    SizedBox(height: 16),
+                    
+                    // 主要功能
+                    _buildModernFunctionGroup([
+                      _buildModernFunctionItem(
+                        icon: Icons.history_rounded,
+                        title: '识别记录',
+                        subtitle: '查看所有识别记录',
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (context) => AllRecordsScreen()),
+                          );
+                        },
+                        color: Colors.blue,
+                        gradient: LinearGradient(
+                          colors: [Colors.blue.shade400, Colors.blue.shade600],
+                        ),
+                      ),
+                      _buildModernFunctionItem(
+                        icon: Icons.business_rounded,
+                        title: '管理中心',
+                        subtitle: '楼层房间管理',
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (context) => ManagementScreen()),
+                          );
+                        },
+                        color: Colors.green,
+                        gradient: LinearGradient(
+                          colors: [Colors.green.shade400, Colors.green.shade600],
+                        ),
+                      ),
+                    ]),
+                    SizedBox(height: 16),
+                    
+                    Text(
+                      '系统设置',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.grey.shade800,
+                      ),
                     ),
-                    _buildDivider(),
-                    _buildFunctionItem(
-                      icon: Icons.info_outline,
-                      title: '关于我们',
-                      subtitle: '应用信息与帮助',
-                      onTap: _showAboutDialog,
-                      color: Colors.purple,
-                    ),
-                  ]),
-                  SizedBox(height: 12),
-                  
-                  // 设置组
-                  _buildFunctionGroup([
-                    _buildFunctionItem(
-                      icon: Icons.cleaning_services,
-                      title: '清除缓存',
-                      subtitle: '清理应用数据',
-                      onTap: _showClearCacheDialog,
-                      color: Colors.orange,
-                    ),
-                    _buildDivider(),
-                    _buildFunctionItem(
-                      icon: Icons.logout,
-                      title: '退出登录',
-                      subtitle: '安全退出应用',
-                      onTap: _showLogoutDialog,
-                      color: Colors.red,
-                    ),
-                  ]),
-                ],
+                    SizedBox(height: 16),
+                    
+                    // 设置功能
+                    _buildFunctionGroup([
+                      _buildFunctionItem(
+                        icon: Icons.info_outline_rounded,
+                        title: '关于我们',
+                        subtitle: '应用信息与帮助',
+                        onTap: _showAboutDialog,
+                        color: Colors.purple,
+                      ),
+                      _buildDivider(),
+                      _buildFunctionItem(
+                        icon: Icons.cleaning_services_rounded,
+                        title: '清除缓存',
+                        subtitle: '清理应用数据',
+                        onTap: _showClearCacheDialog,
+                        color: Colors.orange,
+                      ),
+                      _buildDivider(),
+                      _buildFunctionItem(
+                        icon: Icons.logout_rounded,
+                        title: '退出登录',
+                        subtitle: '安全退出应用',
+                        onTap: _showLogoutDialog,
+                        color: Colors.red,
+                      ),
+                    ]),
+                    SizedBox(height: 20),
+                  ],
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
