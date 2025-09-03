@@ -68,15 +68,15 @@ class _MyScreenState extends State<MyScreen> {
     required Color textColor,
   }) {
     return Container(
-      padding: EdgeInsets.all(16),
+      padding: EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: color,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(10),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.1),
-            blurRadius: 10,
-            offset: Offset(0, 4),
+            blurRadius: 3,
+            offset: Offset(0, 1),
           ),
         ],
       ),
@@ -85,22 +85,22 @@ class _MyScreenState extends State<MyScreen> {
           Icon(
             icon,
             color: textColor,
-            size: 24,
+            size: 20,
           ),
-          SizedBox(height: 8),
+          SizedBox(height: 6),
           Text(
             value,
             style: TextStyle(
-              fontSize: 20,
+              fontSize: 16,
               fontWeight: FontWeight.bold,
               color: textColor,
             ),
           ),
-          SizedBox(height: 4),
+          SizedBox(height: 2),
           Text(
             title,
             style: TextStyle(
-              fontSize: 12,
+              fontSize: 10,
               color: textColor.withOpacity(0.7),
               fontWeight: FontWeight.w500,
             ),
@@ -245,105 +245,107 @@ class _MyScreenState extends State<MyScreen> {
           slivers: [
             // 个人中心头部
             SliverAppBar(
-              expandedHeight: 280,
-              floating: false,
-              pinned: true,
-              backgroundColor: AppTheme.primaryBlue,
-              elevation: 0,
-              flexibleSpace: FlexibleSpaceBar(
-                background: Container(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        AppTheme.primaryBlue,
-                        AppTheme.primaryBlue.withOpacity(0.8),
-                        Colors.blue.shade600,
-                      ],
-                    ),
-                  ),
-                  child: SafeArea(
-                    child: Padding(
-                      padding: EdgeInsets.fromLTRB(20, 40, 20, 20),
-                      child: Column(
-                        children: [
+          expandedHeight: 220,
+          floating: false,
+          pinned: true,
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          flexibleSpace: FlexibleSpaceBar(
+            background: Container(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    Colors.white,
+                    Color(0xFFF5F7FA),
+                  ],
+                ),
+              ),
+              child: SafeArea(
+                child: Padding(
+                  padding: EdgeInsets.fromLTRB(20, 30, 20, 15),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
                           // 个人信息区域
-                          Row(
-                            children: [
-                              // 头像
-                              Container(
-                                width: 70,
-                                height: 70,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: Colors.white,
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black.withOpacity(0.15),
-                                      blurRadius: 15,
-                                      offset: Offset(0, 5),
-                                    ),
-                                  ],
-                                ),
-                                child: Icon(
-                                  Icons.person,
-                                  size: 35,
-                                  color: AppTheme.primaryBlue,
-                                ),
+                      Row(
+                        children: [
+                          // 头像
+                          Container(
+                            width: 60,
+                            height: 60,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              gradient: LinearGradient(
+                                colors: [Colors.blue.shade400, Colors.blue.shade600],
                               ),
-                              SizedBox(width: 16),
-                              // 用户信息
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      '燃气表管理员',
-                                      style: TextStyle(
-                                        fontSize: 22,
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.white,
-                                      ),
-                                    ),
-                                    SizedBox(height: 4),
-                                    Container(
-                                      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                      decoration: BoxDecoration(
-                                        color: Colors.white.withOpacity(0.25),
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                      child: Text(
-                                        '在线',
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          color: Colors.white,
-                                          fontWeight: FontWeight.w500,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.blue.withOpacity(0.3),
+                                  blurRadius: 10,
+                                  offset: Offset(0, 4),
                                 ),
-                              ),
-                              // 设置按钮
-                              Container(
-                                width: 40,
-                                height: 40,
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withOpacity(0.2),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Icon(
-                                  Icons.settings,
-                                  color: Colors.white,
-                                  size: 20,
-                                ),
-                              ),
-                            ],
+                              ],
+                            ),
+                            child: Icon(
+                              Icons.person,
+                              size: 30,
+                              color: Colors.white,
+                            ),
                           ),
-                          SizedBox(height: 30),
-                          // 统计卡片
-                          _buildStatisticsCards(),
+                          SizedBox(width: 16),
+                          // 用户信息
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  '燃气表管理员',
+                                  style: TextStyle(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.grey.shade800,
+                                  ),
+                                ),
+                                SizedBox(height: 4),
+                                Container(
+                                  padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: Colors.green.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Text(
+                                    '在线',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.green.shade600,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          // 设置按钮
+                          Container(
+                            width: 40,
+                            height: 40,
+                            decoration: BoxDecoration(
+                              color: Colors.grey.shade100,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Icon(
+                              Icons.settings,
+                              color: Colors.grey.shade600,
+                              size: 20,
+                            ),
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: 20),
+                      // 统计卡片
+                      _buildStatisticsCards(),
                         ],
                       ),
                     ),
