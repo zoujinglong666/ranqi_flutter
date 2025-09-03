@@ -522,7 +522,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('燃气表识别'),
+        title: const Text('智能抄表'),
         backgroundColor: Colors.white,
         elevation: 0,
       ),

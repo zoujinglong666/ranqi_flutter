@@ -114,11 +114,11 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                   
                   // 登录按钮
                   _buildLoginButton(),
-                  
-                  SizedBox(height: AppTheme.spacingL),
-                  
-                  // 其他选项
-                  _buildFooterOptions(),
+                  //
+                  // SizedBox(height: AppTheme.spacingL),
+                  //
+                  // // 其他选项
+                  // _buildFooterOptions(),
                 ],
               ),
             ),
@@ -157,8 +157,8 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
         SizedBox(height: AppTheme.spacingL),
         
         // 应用标题
-        Text(
-          '燃气表识别',
+        const Text(
+          '智能抄表',
           style: TextStyle(
             fontSize: AppTheme.fontSizeDisplay + 4,
             fontWeight: FontWeight.bold,
@@ -167,8 +167,7 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
         ),
         
         SizedBox(height: AppTheme.spacingS),
-        
-        Text(
+        const Text(
           '智能识别，高效管理',
           style: TextStyle(
             fontSize: AppTheme.fontSizeBody,
