@@ -352,11 +352,9 @@ class ExportService {
                         const SizedBox(height: 8),
 
                         // 费用网格 - 占用剩余空间
-                        Expanded(
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(vertical: 8),
-                            child: _buildFeesGrid(roomData),
-                          ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          child: _buildFeesGrid(roomData),
                         ),
                         const SizedBox(height: 12),
 
@@ -539,7 +537,7 @@ class ExportService {
 
   static Widget _buildFeeCard(Map<String, dynamic> fee) {
     return Container(
-      height: 60, // ✅ 固定高度避免溢出
+      height: 80, // ✅ 固定高度避免溢出
       padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -578,7 +576,7 @@ class ExportService {
                 Text(
                   fee['label'] as String,
                   style: const TextStyle(
-                    fontSize: 11,
+                    fontSize: 12,
                     color: Color(0xFF64748B),
                     fontWeight: FontWeight.w500,
                   ),
@@ -734,17 +732,18 @@ class ExportService {
         Text(
           '导出时间：${DateTime.now().toString().substring(0, 19)}',
           style: const TextStyle(
-            fontSize: 11,
+            fontSize: 12,
             color: Color(0xFF94A3B8),
           ),
           textAlign: TextAlign.center,
         ),
+
         if (exportConfig.contactEmail.isNotEmpty) ...[
           const SizedBox(height: 3),
           Text(
             '联系邮箱：${exportConfig.contactEmail}',
             style: const TextStyle(
-              fontSize: 11,
+              fontSize: 12,
               color: Color(0xFF94A3B8),
             ),
             textAlign: TextAlign.center,
