@@ -652,11 +652,11 @@ class ExportService {
         mainAxisSize: MainAxisSize.min, // ✅ 使用最小尺寸
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
+          const Row(
             children: [
               Icon(Icons.payment, color: Color(0xFF0EA5E9), size: 16), // ✅ 减少图标大小
-              const SizedBox(width: 6), // ✅ 减少间距
-              const Text(
+              SizedBox(width: 6), // ✅ 减少间距
+              Text(
                 '付款信息',
                 style: TextStyle(
                   fontSize: 14, // ✅ 减少字体大小
