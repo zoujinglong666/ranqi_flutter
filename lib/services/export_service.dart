@@ -1,14 +1,17 @@
-import 'dart:io';
 import 'dart:convert';
+import 'dart:io';
 import 'dart:typed_data';
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:share_plus/share_plus.dart';
 import 'package:screenshot/screenshot.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:gal/gal.dart';
+
+import '../models/export_config.dart';
 import 'fee_calculation_service.dart';
 import 'storage_service.dart';
-import '../models/export_config.dart';
 
 class ExportService {
   /// 导出CSV格式的月度报表
@@ -249,6 +252,45 @@ class ExportService {
     }
   }
 
+  /// 保存单个房间图片报表到相册
+  static Future<bool> saveRoomImageToGallery({
+    required FeeCalculationResult roomData,
+    required int year,
+    required int month,
+    String? periodType,
+    ExportConfig? config,
+  }) async {
+    try {
+      // 获取导出配置
+      final exportConfig = config ?? await StorageService.getExportConfig();
+      
+      // 创建截图控制器
+      final screenshotController = ScreenshotController();
+      
+      // 创建报表Widget
+      final reportWidget = _buildReportWidget(
+        roomData: roomData,
+        year: year,
+        month: month,
+        periodType: periodType ?? '月度',
+        exportConfig: exportConfig,
+      );
+      
+      // 截图
+      final Uint8List imageBytes = await screenshotController.captureFromWidget(
+        reportWidget,
+        pixelRatio: 2.0,
+      );
+      
+      // 保存到相册
+      await Gal.putImageBytes(imageBytes);
+      
+      return true;
+    } catch (e) {
+      throw Exception('保存图片到相册失败: $e');
+    }
+  }
+
   /// 构建报表Widget
   static Widget _buildReportWidget({
     required FeeCalculationResult roomData,
@@ -263,8 +305,8 @@ class ExportService {
     const double aspectRatio = baseWidth / baseHeight;
     
     return MediaQuery(
-      data: MediaQueryData(
-        size: const Size(baseWidth, baseHeight),
+      data: const MediaQueryData(
+        size: Size(baseWidth, baseHeight),
         devicePixelRatio: 2.0,
         textScaleFactor: 1.0,
       ),
@@ -281,8 +323,6 @@ class ExportService {
             ),
           ),
           child: Container(
-            margin: const EdgeInsets.all(16),
-            padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(16),
@@ -296,59 +336,58 @@ class ExportService {
             ),
             child: Stack(
               children: [
-                // 水印
+                // 主要内容
+                Positioned.fill(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        // 头部 - 固定高度
+                        _buildReportHeader(roomData, exportConfig),
+                        const SizedBox(height: 8),
+                        
+                        // 时间段 - 固定高度
+                        _buildPeriodInfo(periodType, year, month),
+                        const SizedBox(height: 8),
+
+                        // 费用网格 - 占用剩余空间
+                        Expanded(
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            child: _buildFeesGrid(roomData),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+
+                        // 总计 - 固定高度
+                        _buildTotalSection(roomData),
+                        const SizedBox(height: 8),
+                        
+                        // 付款信息 - 固定高度
+                        _buildPaymentInfo(exportConfig),
+                        const SizedBox(height: 6),
+                        
+                        // 页脚 - 固定高度
+                        _buildFooter(exportConfig),
+                      ],
+                    ),
+                  ),
+                ),
+                // 水印 - 平铺效果（置于最上层）
                 if (exportConfig.enableWatermark)
                   Positioned.fill(
-                    child: Center(
-                      child: Transform.rotate(
-                        angle: -0.3,
-                        child: Text(
-                          exportConfig.watermarkText,
-                          style: TextStyle(
-                            fontSize: 48,
-                            color: Colors.grey.withOpacity(0.08),
-                            fontWeight: FontWeight.bold,
-                          ),
+                    child: CustomPaint(
+                      painter: WatermarkPainter(
+                        text: exportConfig.watermarkText,
+                        textStyle: TextStyle(
+                          fontSize: 24,
+                          color: Colors.grey.withOpacity(0.06),
+                          fontWeight: FontWeight.w400,
                         ),
                       ),
                     ),
                   ),
-                // 主要内容
-                Positioned.fill(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      // 头部
-                      _buildReportHeader(roomData, exportConfig),
-                      const SizedBox(height: 16),
-                      
-                      // 时间段
-                      _buildPeriodInfo(periodType, year, month),
-                      const SizedBox(height: 20),
-                      
-                      // 费用网格
-                      Expanded(
-                        flex: 3,
-                        child: _buildFeesGrid(roomData),
-                      ),
-                      const SizedBox(height: 20),
-                      
-                      // 总计
-                      _buildTotalSection(roomData),
-                      const SizedBox(height: 16),
-                      
-                      // 付款信息
-                      Expanded(
-                        flex: 1,
-                        child: _buildPaymentInfo(exportConfig),
-                      ),
-                      const SizedBox(height: 12),
-                      
-                      // 页脚
-                      _buildFooter(exportConfig),
-                    ],
-                  ),
-                ),
               ],
             ),
           ),
@@ -359,17 +398,17 @@ class ExportService {
 
   static Widget _buildReportHeader(FeeCalculationResult roomData, ExportConfig exportConfig) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
           colors: [Color(0xFF4F46E5), Color(0xFF7C3AED)],
         ),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(10),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF4F46E5).withOpacity(0.3),
-            blurRadius: 15,
-            offset: const Offset(0, 8),
+            color: const Color(0xFF4F46E5).withOpacity(0.2),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
@@ -378,20 +417,21 @@ class ExportService {
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
                   exportConfig.companyName,
                   style: const TextStyle(
-                    fontSize: 28,
+                    fontSize: 22,
                     fontWeight: FontWeight.bold,
                     color: Colors.white,
                   ),
                 ),
-                const SizedBox(height: 6),
+                const SizedBox(height: 2),
                 const Text(
                   '房间费用报表',
                   style: TextStyle(
-                    fontSize: 20,
+                    fontSize: 16,
                     color: Colors.white70,
                     fontWeight: FontWeight.w500,
                   ),
@@ -400,22 +440,22 @@ class ExportService {
             ),
           ),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(8),
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withOpacity(0.1),
-                  blurRadius: 8,
-                  offset: const Offset(0, 4),
+                  blurRadius: 6,
+                  offset: const Offset(0, 2),
                 ),
               ],
             ),
             child: Text(
               '${roomData.floor}-${roomData.roomNumber}',
               style: const TextStyle(
-                fontSize: 24,
+                fontSize: 20,
                 fontWeight: FontWeight.bold,
                 color: Color(0xFF4F46E5),
               ),
@@ -429,31 +469,31 @@ class ExportService {
   static Widget _buildPeriodInfo(String periodType, int year, int month) {
     final periodText = _getPeriodText(periodType, year, month);
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
         color: const Color(0xFFF1F5F9),
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(8),
         border: Border.all(color: const Color(0xFFE2E8F0), width: 1),
       ),
       child: Row(
         children: [
           Container(
-            padding: const EdgeInsets.all(8),
+            padding: const EdgeInsets.all(4),
             decoration: BoxDecoration(
               color: const Color(0xFF4F46E5).withOpacity(0.1),
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(6),
             ),
             child: const Icon(
               Icons.calendar_today,
               color: Color(0xFF4F46E5),
-              size: 20,
+              size: 16,
             ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 8),
           Text(
             '报表周期：$periodText',
             style: const TextStyle(
-              fontSize: 18,
+              fontSize: 14,
               fontWeight: FontWeight.w600,
               color: Color(0xFF1E293B),
             ),
@@ -473,101 +513,109 @@ class ExportService {
       {'label': '卫生费', 'amount': roomData.sanitationFee, 'icon': '🧹', 'color': const Color(0xFF38A169)},
     ];
 
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        crossAxisSpacing: 10,
-        mainAxisSpacing: 10,
-        childAspectRatio: 3.8, // 进一步增加宽高比，避免溢出
+    return Column(
+      children: [
+        for (int i = 0; i < fees.length; i += 2)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Row(
+              children: [
+                Expanded(
+                  child: _buildFeeCard(fees[i]),
+                ),
+                const SizedBox(width: 10),
+                if (i + 1 < fees.length)
+                  Expanded(
+                    child: _buildFeeCard(fees[i + 1]),
+                  )
+                else
+                  const Expanded(child: SizedBox()),
+              ],
+            ),
+          ),
+      ],
+    );
+  }
+
+  static Widget _buildFeeCard(Map<String, dynamic> fee) {
+    return Container(
+      height: 60, // ✅ 固定高度避免溢出
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: const Color(0xFFE2E8F0), width: 1),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
-      itemCount: fees.length,
-      itemBuilder: (context, index) {
-        final fee = fees[index];
-        return Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: const Color(0xFFE2E8F0), width: 1),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.08),
-                blurRadius: 12,
-                offset: const Offset(0, 4),
+      child: Row(
+        children: [
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: (fee['color'] as Color).withOpacity(0.15),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Center(
+              child: Text(
+                fee['icon'] as String,
+                style: const TextStyle(fontSize: 18),
               ),
-            ],
+            ),
           ),
-          child: Row(
-            children: [
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: (fee['color'] as Color).withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Center(
-                  child: Text(
-                    fee['icon'] as String,
-                    style: const TextStyle(fontSize: 24),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  fee['label'] as String,
+                  style: const TextStyle(
+                    fontSize: 11,
+                    color: Color(0xFF64748B),
+                    fontWeight: FontWeight.w500,
                   ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      fee['label'] as String,
-                      style: const TextStyle(
-                        fontSize: 14,
-                        color: Color(0xFF64748B),
-                        fontWeight: FontWeight.w500,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 1),
-                    FittedBox(
-                      fit: BoxFit.scaleDown,
-                      alignment: Alignment.centerLeft,
-                      child: Text(
-                        '¥${(fee['amount'] as double).toStringAsFixed(2)}',
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF059669),
-                        ),
-                      ),
-                    ),
-                  ],
+                Text(
+                  '¥${(fee['amount'] as double).toStringAsFixed(2)}',
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF059669),
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-        );
-      },
+        ],
+      ),
     );
   }
 
   static Widget _buildTotalSection(FeeCalculationResult roomData) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [Color(0xFFDC2626), Color(0xFFB91C1C)],
+          colors: [Color(0xFF4F46E5), Color(0xFF6366F1)],
         ),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(8),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFFDC2626).withOpacity(0.3),
-            blurRadius: 15,
-            offset: const Offset(0, 8),
+            color: const Color(0xFF4F46E5).withOpacity(0.2),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
@@ -577,7 +625,7 @@ class ExportService {
           const Text(
             '应缴费用总计',
             style: TextStyle(
-              fontSize: 20,
+              fontSize: 16,
               fontWeight: FontWeight.w600,
               color: Colors.white,
             ),
@@ -585,7 +633,7 @@ class ExportService {
           Text(
             '¥${roomData.totalAmount.toStringAsFixed(2)}',
             style: const TextStyle(
-              fontSize: 28,
+              fontSize: 22,
               fontWeight: FontWeight.bold,
               color: Colors.white,
             ),
@@ -597,30 +645,31 @@ class ExportService {
 
   static Widget _buildPaymentInfo(ExportConfig exportConfig) {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(12), // ✅ 减少内边距
       decoration: BoxDecoration(
         color: const Color(0xFFF0F9FF),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(8), // ✅ 减少圆角
         border: Border.all(color: const Color(0xFF0EA5E9)),
       ),
       child: Column(
+        mainAxisSize: MainAxisSize.min, // ✅ 使用最小尺寸
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Row(
+          Row(
             children: [
-              Icon(Icons.payment, color: Color(0xFF0EA5E9)),
-              SizedBox(width: 8),
-              Text(
+              Icon(Icons.payment, color: Color(0xFF0EA5E9), size: 16), // ✅ 减少图标大小
+              const SizedBox(width: 6), // ✅ 减少间距
+              const Text(
                 '付款信息',
                 style: TextStyle(
-                  fontSize: 18,
+                  fontSize: 14, // ✅ 减少字体大小
                   fontWeight: FontWeight.bold,
                   color: Color(0xFF0EA5E9),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 8), // ✅ 减少间距
           _buildPaymentItem('银行名称', exportConfig.bankName),
           _buildPaymentItem('账号', exportConfig.accountNumber),
           _buildPaymentItem('户名', exportConfig.accountName),
@@ -633,28 +682,30 @@ class ExportService {
 
   static Widget _buildPaymentItem(String label, String value) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.only(bottom: 4), // ✅ 减少底部间距
       child: Row(
         children: [
           SizedBox(
-            width: 80,
+            width: 60, // ✅ 减少标签宽度
             child: Text(
               label,
               style: const TextStyle(
-                fontSize: 14,
+                fontSize: 12, // ✅ 减少字体大小
                 color: Color(0xFF64748B),
               ),
             ),
           ),
-          const Text(': ', style: TextStyle(color: Color(0xFF64748B))),
+          const Text(': ', style: TextStyle(color: Color(0xFF64748B), fontSize: 12)),
           Expanded(
             child: Text(
               value,
               style: const TextStyle(
-                fontSize: 14,
+                fontSize: 12, // ✅ 减少字体大小
                 fontWeight: FontWeight.w500,
                 color: Color(0xFF1E293B),
               ),
+              maxLines: 1, // ✅ 限制为单行
+              overflow: TextOverflow.ellipsis, // ✅ 超出部分显示省略号
             ),
           ),
         ],
@@ -1509,5 +1560,66 @@ class ExportService {
     htmlBuffer.writeln('</html>');
     
     return htmlBuffer.toString();
+  }
+}
+
+/// 自定义水印绘制器，实现平铺效果
+class WatermarkPainter extends CustomPainter {
+  final String text;
+  final TextStyle textStyle;
+
+  WatermarkPainter({
+    required this.text,
+    required this.textStyle,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final textPainter = TextPainter(
+      text: TextSpan(text: text, style: textStyle),
+      textDirection: TextDirection.ltr,
+    );
+    textPainter.layout();
+
+    // 计算平铺间距
+    const double spacingX = 200.0;
+    const double spacingY = 150.0;
+    const double rotationAngle = -0.3; // 旋转角度
+
+    // 计算需要绘制的行列数
+    final int cols = (size.width / spacingX).ceil() + 2;
+    final int rows = (size.height / spacingY).ceil() + 2;
+
+    canvas.save();
+    
+    for (int row = 0; row < rows; row++) {
+      for (int col = 0; col < cols; col++) {
+        canvas.save();
+        
+        // 计算位置（交错排列）
+        final double x = col * spacingX + (row % 2 == 1 ? spacingX / 2 : 0);
+        final double y = row * spacingY;
+        
+        // 移动到绘制位置
+        canvas.translate(x, y);
+        
+        // 旋转
+        canvas.rotate(rotationAngle);
+        
+        // 绘制文字
+        textPainter.paint(canvas, Offset(-textPainter.width / 2, -textPainter.height / 2));
+        
+        canvas.restore();
+      }
+    }
+    
+    canvas.restore();
+  }
+
+  @override
+  bool shouldRepaint(CustomPainter oldDelegate) {
+    return oldDelegate is! WatermarkPainter ||
+        oldDelegate.text != text ||
+        oldDelegate.textStyle != textStyle;
   }
 }

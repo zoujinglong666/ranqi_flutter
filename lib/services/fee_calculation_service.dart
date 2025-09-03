@@ -40,8 +40,9 @@ class FeeCalculationService {
       // 首先尝试从租金配置获取
       final rentConfigs = await StorageService.getRentConfigs();
       final targetDate = DateTime(year, month);
+      final floorInt = int.tryParse(floor) ?? 0;
       final validConfig = rentConfigs.where((config) => 
-        config.floor == floor && 
+        config.floor == floorInt && 
         config.roomNumber == roomNumber &&
         config.isValidForMonth(targetDate)
       ).firstOrNull;
@@ -52,7 +53,7 @@ class FeeCalculationService {
         // 如果没有配置，则使用租金记录
         final rentRecords = await StorageService.getRentRecords();
         final rentRecord = rentRecords.where((r) => 
-          r.floor == floor && 
+          r.floor == floorInt && 
           r.roomNumber == roomNumber &&
           r.month.year == year &&
           r.month.month == month

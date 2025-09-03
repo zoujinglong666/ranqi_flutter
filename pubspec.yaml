@@ -40,6 +40,9 @@ dependencies:
   # 截图和图片处理
   screenshot: ^3.0.0
   
+  # 保存图片到相册
+  gal: ^2.3.0
+  
   # 图标
   cupertino_icons: ^1.0.2
 

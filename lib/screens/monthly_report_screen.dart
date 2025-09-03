@@ -831,6 +831,68 @@ class _MonthlyReportScreenState extends State<MonthlyReportScreen> {
                     ),
                   ),
                 ),
+                const SizedBox(width: AppTheme.spacingS),
+                // 房间操作菜单按钮
+                PopupMenuButton<String>(
+                  icon: Icon(
+                    Icons.more_vert,
+                    color: AppTheme.primaryBlue,
+                    size: 20,
+                  ),
+                  onSelected: (value) => _handleRoomMenuAction(value, data),
+                  itemBuilder: (context) => [
+                    PopupMenuItem(
+                      value: 'export_csv',
+                      child: Row(
+                        children: [
+                          Icon(Icons.table_chart, color: Colors.green, size: 18),
+                          const SizedBox(width: AppTheme.spacingS),
+                          Text('导出CSV'),
+                        ],
+                      ),
+                    ),
+                    PopupMenuItem(
+                      value: 'export_html',
+                      child: Row(
+                        children: [
+                          Icon(Icons.web, color: Colors.orange, size: 18),
+                          const SizedBox(width: AppTheme.spacingS),
+                          Text('导出HTML'),
+                        ],
+                      ),
+                    ),
+                    PopupMenuItem(
+                      value: 'preview_html',
+                      child: Row(
+                        children: [
+                          Icon(Icons.preview, color: Colors.purple, size: 18),
+                          const SizedBox(width: AppTheme.spacingS),
+                          Text('HTML预览'),
+                        ],
+                      ),
+                    ),
+                    PopupMenuItem(
+                      value: 'preview_image',
+                      child: Row(
+                        children: [
+                          Icon(Icons.image_search, color: Colors.indigo, size: 18),
+                          const SizedBox(width: AppTheme.spacingS),
+                          Text('图片预览'),
+                        ],
+                      ),
+                    ),
+                    PopupMenuItem(
+                      value: 'export_image',
+                      child: Row(
+                        children: [
+                          Icon(Icons.image, color: Colors.teal, size: 18),
+                          const SizedBox(width: AppTheme.spacingS),
+                          Text('导出图片'),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ],
             ),
           ),
@@ -1582,6 +1644,27 @@ class _MonthlyReportScreenState extends State<MonthlyReportScreen> {
     }
   }
 
+  /// 处理房间菜单操作
+  void _handleRoomMenuAction(String action, FeeCalculationResult roomData) {
+    switch (action) {
+      case 'export_csv':
+        _exportSingleRoomToCSV(roomData);
+        break;
+      case 'export_html':
+        _exportSingleRoomToHTML(roomData);
+        break;
+      case 'preview_html':
+        _previewSingleRoomHTML(roomData);
+        break;
+      case 'preview_image':
+        _previewSingleRoomImage(roomData);
+        break;
+      case 'export_image':
+        _exportSingleRoomToImage(roomData);
+        break;
+    }
+  }
+
   Future<void> _exportSingleRoomToHTML(FeeCalculationResult roomData) async {
     try {
       // 获取导出配置
@@ -1698,7 +1781,7 @@ class _MonthlyReportScreenState extends State<MonthlyReportScreen> {
             children: [
               CircularProgressIndicator(),
               SizedBox(width: 16),
-              Text('正在生成图片...'),
+              Text('正在保存到相册...'),
             ],
           ),
         ),
@@ -1707,7 +1790,7 @@ class _MonthlyReportScreenState extends State<MonthlyReportScreen> {
       // 获取导出配置
       final exportConfig = await StorageService.getExportConfig();
       
-      final filePath = await ExportService.exportSingleRoomToImage(
+      final success = await ExportService.saveRoomImageToGallery(
         roomData: roomData,
         year: _selectedYear,
         month: _selectedMonth,
@@ -1719,19 +1802,30 @@ class _MonthlyReportScreenState extends State<MonthlyReportScreen> {
       if (mounted) {
         Navigator.pop(context);
         
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('图片已导出: $filePath'),
-            duration: Duration(seconds: 5),
-            action: SnackBarAction(
-              label: '打开文件夹',
-              onPressed: () {
-                final directory = File(filePath).parent.path;
-                Process.run('explorer', [directory]);
-              },
+        if (success) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('图片已保存到相册'),
+              duration: Duration(seconds: 3),
+              backgroundColor: Colors.green,
+              action: SnackBarAction(
+                label: '查看相册',
+                textColor: Colors.white,
+                onPressed: () {
+                  // 在Android上可以打开相册应用
+                  // 这里可以根据需要添加打开相册的逻辑
+                },
+              ),
             ),
-          ),
-        );
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('保存到相册失败'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
       }
     } catch (e) {
       // 关闭加载对话框
@@ -1739,7 +1833,10 @@ class _MonthlyReportScreenState extends State<MonthlyReportScreen> {
         Navigator.pop(context);
         
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('导出图片失败: $e')),
+          SnackBar(
+            content: Text('保存图片失败: $e'),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     }
@@ -1764,7 +1861,7 @@ class _MonthlyReportScreenState extends State<MonthlyReportScreen> {
             children: [
               CircularProgressIndicator(),
               SizedBox(width: 16),
-              Text('正在生成图片...'),
+              Text('正在保存到相册...'),
             ],
           ),
         ),
@@ -1773,39 +1870,65 @@ class _MonthlyReportScreenState extends State<MonthlyReportScreen> {
       // 获取导出配置
       final exportConfig = await StorageService.getExportConfig();
       
-      // 导出每个房间的图片
-      List<String> filePaths = [];
+      // 保存每个房间的图片到相册
+      int successCount = 0;
+      int totalCount = _reportData.length;
+      
       for (int i = 0; i < _reportData.length; i++) {
         final roomData = _reportData[i];
-        final filePath = await ExportService.exportSingleRoomToImage(
-          roomData: roomData,
-          year: _selectedYear,
-          month: _selectedMonth,
-          periodType: _selectedPeriodType.displayName,
-          config: exportConfig,
-        );
-        filePaths.add(filePath);
+        try {
+          final success = await ExportService.saveRoomImageToGallery(
+            roomData: roomData,
+            year: _selectedYear,
+            month: _selectedMonth,
+            periodType: _selectedPeriodType.displayName,
+            config: exportConfig,
+          );
+          if (success) {
+            successCount++;
+          }
+        } catch (e) {
+          // 单个房间保存失败，继续处理其他房间
+          print('保存房间 ${roomData.floor}-${roomData.roomNumber} 图片失败: $e');
+        }
       }
 
       // 关闭加载对话框
       if (mounted) {
         Navigator.pop(context);
         
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('已导出 ${filePaths.length} 个房间的图片'),
-            duration: Duration(seconds: 5),
-            action: SnackBarAction(
-              label: '打开文件夹',
-              onPressed: () {
-                if (filePaths.isNotEmpty) {
-                  final directory = File(filePaths.first).parent.path;
-                  Process.run('explorer', [directory]);
-                }
-              },
+        if (successCount == totalCount) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('已成功保存 $successCount 个房间的图片到相册'),
+              duration: Duration(seconds: 3),
+              backgroundColor: Colors.green,
+              action: SnackBarAction(
+                label: '查看相册',
+                textColor: Colors.white,
+                onPressed: () {
+                  // 在Android上可以打开相册应用
+                  // 这里可以根据需要添加打开相册的逻辑
+                },
+              ),
             ),
-          ),
-        );
+          );
+        } else if (successCount > 0) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('已保存 $successCount/$totalCount 个房间的图片到相册'),
+              duration: Duration(seconds: 3),
+              backgroundColor: Colors.orange,
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('保存图片到相册失败'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
       }
     } catch (e) {
       // 关闭加载对话框
@@ -1813,7 +1936,10 @@ class _MonthlyReportScreenState extends State<MonthlyReportScreen> {
         Navigator.pop(context);
         
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('导出图片失败: $e')),
+          SnackBar(
+            content: Text('保存图片失败: $e'),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     }
