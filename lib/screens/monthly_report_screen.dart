@@ -6,7 +6,6 @@ import '../services/storage_service.dart';
 import '../services/export_service.dart';
 import '../services/event_manager.dart';
 import '../theme/app_theme.dart';
-import '../models/export_config.dart';
 import 'html_preview_screen.dart';
 import 'image_preview_screen.dart';
 

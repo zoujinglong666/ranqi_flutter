@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import '../models/service_fee.dart';
 import '../services/storage_service.dart';
 import '../services/event_manager.dart';
 import '../theme/app_theme.dart';
 
 class ServiceFeeManagementScreen extends StatefulWidget {
-  const ServiceFeeManagementScreen({Key? key}) : super(key: key);
+  const ServiceFeeManagementScreen({super.key});
 
   @override
   _ServiceFeeManagementScreenState createState() => _ServiceFeeManagementScreenState();
@@ -559,7 +558,6 @@ class _ServiceFeeManagementScreenState extends State<ServiceFeeManagementScreen>
                     ),
                   ),
                   SizedBox(width: AppTheme.spacingM),
-                  
                   // 中间内容
                   Expanded(
                     child: Column(

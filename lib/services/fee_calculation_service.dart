@@ -1,8 +1,4 @@
 import '../models/meter_record.dart';
-import '../models/unit_price.dart';
-import '../models/rent_record.dart';
-import '../models/rent_config.dart';
-import '../models/service_fee.dart';
 import 'storage_service.dart';
 
 class FeeCalculationService {
@@ -72,11 +68,11 @@ class FeeCalculationService {
       
       final publicServiceFee = serviceFees
           .where((fee) => fee.feeType == '公共服务费')
-          .fold<double>(0.0, (sum, fee) => sum + (fee.amount?.toDouble() ?? 0.0));
+          .fold<double>(0.0, (sum, fee) => sum + (fee.amount.toDouble() ?? 0.0));
       
       final sanitationFee = serviceFees
           .where((fee) => fee.feeType == '卫生费')
-          .fold<double>(0.0, (sum, fee) => sum + (fee.amount?.toDouble() ?? 0.0));
+          .fold<double>(0.0, (sum, fee) => sum + (fee.amount.toDouble() ?? 0.0));
 
       // 计算总费用
       final totalFee = waterFee.totalAmount + electricFee.totalAmount + gasFee.totalAmount + rent + publicServiceFee + sanitationFee;
