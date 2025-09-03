@@ -765,6 +765,84 @@ class _FloorManagementScreenState extends State<FloorManagementScreen> with Widg
     }
   }
 
+  // 智能添加楼层方法
+  Future<void> _addFloorSmart(List<int> existingFloors) async {
+    // 计算下一个楼层号
+    int nextFloor = 1;
+    if (existingFloors.isNotEmpty) {
+      existingFloors.sort();
+      nextFloor = existingFloors.last + 1;
+    }
+    
+    // 预填充楼层号
+    _floorController.text = nextFloor.toString();
+    
+    final floorNumber = await showDialog<int>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('添加楼层'),
+        content: TextField(
+          controller: _floorController,
+          decoration: AppStyles.inputDecoration(
+            labelText: '楼层号',
+            hintText: '建议楼层号: $nextFloor',
+          ),
+          keyboardType: TextInputType.number,
+          autofocus: true,
+          onTap: () {
+            // 选中所有文本，方便用户修改
+            _floorController.selection = TextSelection(
+              baseOffset: 0,
+              extentOffset: _floorController.text.length,
+            );
+          },
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text('取消'),
+          ),
+          TextButton(
+            onPressed: () {
+              final floor = int.tryParse(_floorController.text.trim());
+              Navigator.of(context).pop(floor);
+            },
+            child: Text('添加'),
+          ),
+        ],
+      ),
+    );
+
+    if (floorNumber != null && floorNumber > 0) {
+      final availableFloors = await StorageService.getAvailableFloors();
+      if (!availableFloors.contains(floorNumber)) {
+        // 使用新的楼层管理系统
+        final newFloor = Floor(
+          floorNumber: floorNumber,
+          createdAt: DateTime.now(),
+          description: '智能添加的楼层',
+        );
+        
+        await StorageService.saveFloor(newFloor);
+        
+        setState(() {
+          _selectedFloor = floorNumber;
+        });
+        
+        _floorController.clear();
+        await _loadRooms(); // 重新加载数据以更新UI
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('楼层添加成功，请添加房间')),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('该楼层已存在')),
+        );
+      }
+    }
+  }
+
   Future<void> _deleteFloor(int floor) async {
     final roomsInFloor = _getRoomsForFloor(floor);
     final confirmed = await showDialog<bool>(
@@ -847,24 +925,9 @@ class _FloorManagementScreenState extends State<FloorManagementScreen> with Widg
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-          '楼层管理',
-          style: TextStyle(
-            fontSize: AppTheme.fontSizeTitle,
-            fontWeight: FontWeight.w600,
-            color: Colors.white,
-          ),
-        ),
-        backgroundColor: AppTheme.primaryBlue,
+        title: const Text('楼层管理'),
+        backgroundColor: Colors.white,
         elevation: 0,
-        iconTheme: IconThemeData(color: Colors.white),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.add_home),
-            onPressed: _addFloor,
-            tooltip: '添加楼层',
-          ),
-        ],
       ),
       body: RefreshIndicator(
         onRefresh: _loadRooms,
@@ -874,35 +937,65 @@ class _FloorManagementScreenState extends State<FloorManagementScreen> with Widg
             Container(
               width: 120,
               decoration: BoxDecoration(
-                color: Colors.white,
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.grey.shade50,
+                    Colors.white,
+                  ],
+                ),
                 border: Border(
                   right: BorderSide(
-                    color: Colors.grey.shade300,
-                    width: 1,
+                    color: Colors.grey.shade200,
+                    width: 0.5,
                   ),
                 ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.grey.shade200,
+                    blurRadius: 4,
+                    offset: Offset(2, 0),
+                  ),
+                ],
               ),
               child: Column(
               children: [
                 Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.all(AppTheme.spacingM),
+                  padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
                   decoration: BoxDecoration(
-                    color: AppTheme.primaryBlue.withOpacity(0.1),
+                    color: Colors.white,
                     border: Border(
                       bottom: BorderSide(
-                        color: Colors.grey.shade300,
+                        color: Colors.grey.shade200,
                         width: 1,
                       ),
                     ),
                   ),
-                  child: Text(
-                    '楼层',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: AppTheme.primaryBlue,
-                    ),
-                    textAlign: TextAlign.center,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Container(
+                        width: 3,
+                        height: 20,
+                        decoration: BoxDecoration(
+                          color: Colors.blue.shade600,
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                      SizedBox(width: 12),
+                      Icon(Icons.apartment, color: Colors.blue.shade600, size: 20),
+                      SizedBox(width: 8),
+                      Text(
+                        '楼层',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.grey.shade800,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
                 Expanded(
@@ -910,13 +1003,12 @@ class _FloorManagementScreenState extends State<FloorManagementScreen> with Widg
                     future: _getAvailableFloors(),
                     builder: (context, snapshot) {
                       if (snapshot.connectionState == ConnectionState.waiting) {
-                        return Center(
+                        return const Center(
                           child: CircularProgressIndicator(
                             color: AppTheme.primaryBlue,
                           ),
                         );
                       }
-                      
                       if (snapshot.hasError) {
                         return Center(
                           child: Text(
@@ -925,51 +1017,148 @@ class _FloorManagementScreenState extends State<FloorManagementScreen> with Widg
                           ),
                         );
                       }
-                      
                       final floors = snapshot.data ?? [1];
-                      
-                      return ListView.builder(
-                        itemCount: floors.length,
-                        itemBuilder: (context, index) {
-                          final floor = floors[index];
-                      final isSelected = floor == _selectedFloor;
-                      
-                      return Container(
-                        decoration: BoxDecoration(
-                          color: isSelected ? AppTheme.primaryBlue.withOpacity(0.1) : Colors.transparent,
-                          border: Border(
-                            bottom: BorderSide(
-                              color: Colors.grey.shade200,
-                              width: 0.5,
-                            ),
-                          ),
-                        ),
-                        child: GestureDetector(
-                          onTap: () {
-                            setState(() {
-                              _selectedFloor = floor;
-                            });
-                          },
-                          onLongPress: () {
-                            _deleteFloor(floor);
-                          },
-                          child: ListTile(
-                            title: Text(
-                              '${floor}楼',
-                              style: TextStyle(
-                                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                                color: isSelected ? AppTheme.primaryBlue : AppTheme.textPrimary,
+                      return SingleChildScrollView(
+                        padding: const EdgeInsets.symmetric(vertical: 4),
+                        child: Column(
+                          children: [
+                            // 楼层列表
+                            ...floors.map((floor) {
+                              final isSelected = floor == _selectedFloor;
+                              
+                              return Container(
+                                margin: EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                                decoration: BoxDecoration(
+                                  gradient: isSelected
+                                      ? LinearGradient(
+                                          begin: Alignment.centerLeft,
+                                          end: Alignment.centerRight,
+                                          colors: [
+                                            Colors.blue.shade100,
+                                            Colors.blue.shade50,
+                                          ],
+                                        )
+                                      : null,
+                                  color: isSelected ? null : Colors.white,
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: isSelected
+                                      ? Border.all(color: Colors.blue.shade300, width: 1.5)
+                                      : Border.all(color: Colors.grey.shade200, width: 0.5),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: isSelected
+                                          ? Colors.blue.shade200.withOpacity(0.3)
+                                          : Colors.grey.shade200.withOpacity(0.5),
+                                      blurRadius: isSelected ? 6 : 3,
+                                      offset: Offset(0, 2),
+                                    ),
+                                  ],
+                                ),
+                                child: Material(
+                                  color: Colors.transparent,
+                                  child: InkWell(
+                                    borderRadius: BorderRadius.circular(12),
+                                    onTap: () {
+                                      setState(() {
+                                        _selectedFloor = floor;
+                                      });
+                                    },
+                                    onLongPress: () {
+                                      _deleteFloor(floor);
+                                    },
+                                    child: Container(
+                                      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                      child: Row(
+                                        children: [
+                                          Container(
+                                            padding: const EdgeInsets.all(4),
+                                            decoration: BoxDecoration(
+                                              color: isSelected
+                                                  ? Colors.blue.shade600
+                                                  : Colors.grey.shade100,
+                                              borderRadius: BorderRadius.circular(4),
+                                            ),
+                                            child: Icon(
+                                              Icons.business,
+                                              color: isSelected ? Colors.white : Colors.grey.shade600,
+                                              size: 18,
+                                            ),
+                                          ),
+                                          SizedBox(width: 12),
+                                          Expanded(
+                                            child: Text(
+                                              '${floor}楼',
+                                              style: TextStyle(
+                                                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                                                color: isSelected ? Colors.blue.shade800 : Colors.grey.shade700,
+                                                fontSize: 15,
+                                              ),
+                                              textAlign: TextAlign.left,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              );
+                            }).toList(),
+                            // 添加楼层按钮
+                            Container(
+                              margin: EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: Colors.grey.shade50,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: Colors.grey.shade300, width: 1),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.grey.shade200.withOpacity(0.5),
+                                    blurRadius: 3,
+                                    offset: Offset(0, 2),
+                                  ),
+                                ],
                               ),
-                              textAlign: TextAlign.center,
+                              child: Material(
+                                color: Colors.transparent,
+                                child: InkWell(
+                                  borderRadius: BorderRadius.circular(12),
+                                  onTap: () => _addFloorSmart(floors),
+                                  child: Container(
+                                    padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                    child: Row(
+                                      children: [
+                                        Container(
+                                          padding: const EdgeInsets.all(4),
+                                          decoration: BoxDecoration(
+                                            color: Colors.green.shade100,
+                                            borderRadius: BorderRadius.circular(4),
+                                          ),
+                                          child: Icon(
+                                            Icons.add,
+                                            color: Colors.green.shade600,
+                                            size: 18,
+                                          ),
+                                        ),
+                                        SizedBox(width: 12),
+                                        Expanded(
+                                          child: Text(
+                                            '添加楼层',
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.w500,
+                                              color: Colors.grey.shade700,
+                                              fontSize: 15,
+                                            ),
+                                            textAlign: TextAlign.left,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
                             ),
-                            contentPadding: const EdgeInsets.symmetric(
-                              horizontal: AppTheme.spacingS,
-                              vertical: AppTheme.spacingXS,
-                            ),
-                          ),
+                          ],
                         ),
-                      );
-                        },
                       );
                     },
                   ),
@@ -989,29 +1178,80 @@ class _FloorManagementScreenState extends State<FloorManagementScreen> with Widg
                   // 房间列表标题
                   Container(
                     width: double.infinity,
-                    padding: const EdgeInsets.all(AppTheme.spacingM),
+                    padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      gradient: LinearGradient(
+                        begin: Alignment.centerLeft,
+                        end: Alignment.centerRight,
+                        colors: [
+                          Colors.white,
+                          Colors.grey.shade50,
+                        ],
+                      ),
                       border: Border(
                         bottom: BorderSide(
-                          color: Colors.grey.shade300,
-                          width: 1,
+                          color: Colors.grey.shade200,
+                          width: 0.5,
                         ),
                       ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.grey.shade100,
+                          blurRadius: 2,
+                          offset: Offset(0, 1),
+                        ),
+                      ],
                     ),
                     child: Row(
                       children: [
-                        Icon(
-                          Icons.door_front_door,
-                          color: AppTheme.primaryBlue,
-                          size: 20,
+                        Container(
+                          padding: EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [
+                                Colors.blue.shade500,
+                                Colors.blue.shade600,
+                              ],
+                            ),
+                            borderRadius: BorderRadius.circular(10),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.blue.shade200,
+                                blurRadius: 4,
+                                offset: Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: Icon(
+                            Icons.door_front_door,
+                            color: Colors.white,
+                            size: 20,
+                          ),
                         ),
-                        const SizedBox(width: AppTheme.spacingS),
-                        Text(
-                          '${_selectedFloor}楼房间 (${currentFloorRooms.length}间)',
-                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            color: AppTheme.textPrimary,
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                '${_selectedFloor}楼房间管理',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.grey.shade800,
+                                ),
+                              ),
+                              SizedBox(height: 2),
+                              Text(
+                                '共 ${currentFloorRooms.length} 间房间',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.grey.shade600,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ],
@@ -1020,23 +1260,55 @@ class _FloorManagementScreenState extends State<FloorManagementScreen> with Widg
                   
                   // 添加房间区域
                   Container(
-                    color: Colors.white,
-                    padding: const EdgeInsets.all(AppTheme.spacingM),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      border: Border(
+                        bottom: BorderSide(
+                          color: Colors.grey.shade100,
+                          width: 0.5,
+                        ),
+                      ),
+                    ),
+                    padding: const EdgeInsets.all(20),
                     child: Row(
                       children: [
                         Expanded(
-                          child: Text(
-                            '点击添加按钮创建新房间',
-                            style: TextStyle(
-                              color: Colors.grey.shade600,
-                              fontSize: AppTheme.fontSizeBody,
-                            ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                '房间管理',
+                                style: TextStyle(
+                                  color: Colors.grey.shade800,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                              SizedBox(height: 4),
+                              Text(
+                                '点击添加按钮创建新房间',
+                                style: TextStyle(
+                                  color: Colors.grey.shade600,
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                        AppStyles.primaryButton(
-                          text: '添加房间',
-                          icon: Icons.add_home,
+                        ElevatedButton.icon(
                           onPressed: _addRoom,
+                          icon: Icon(Icons.add_home, size: 18),
+                          label: Text('添加房间'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.blue.shade600,
+                            foregroundColor: Colors.white,
+                            elevation: 2,
+                            shadowColor: Colors.blue.shade200,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                          ),
                         ),
                       ],
                     ),
@@ -1093,20 +1365,31 @@ class _FloorManagementScreenState extends State<FloorManagementScreen> with Widg
                               final room = currentFloorRooms[index];
                               
                               return Container(
-                                margin: const EdgeInsets.only(bottom: 12),
+                                margin: const EdgeInsets.only(bottom: 16),
                                 decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(16),
+                                  gradient: LinearGradient(
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                    colors: [
+                                      Colors.white,
+                                      Colors.grey.shade50.withOpacity(0.5),
+                                    ],
+                                  ),
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(
+                                    color: Colors.grey.shade200,
+                                    width: 0.5,
+                                  ),
                                   boxShadow: [
                                     BoxShadow(
-                                      color: Colors.black.withOpacity(0.04),
-                                      blurRadius: 8,
-                                      offset: const Offset(0, 2),
+                                      color: Colors.grey.shade200.withOpacity(0.6),
+                                      blurRadius: 12,
+                                      offset: const Offset(0, 4),
                                     ),
                                     BoxShadow(
-                                      color: Colors.black.withOpacity(0.02),
-                                      blurRadius: 16,
-                                      offset: const Offset(0, 4),
+                                      color: Colors.grey.shade100.withOpacity(0.4),
+                                      blurRadius: 6,
+                                      offset: const Offset(0, 2),
                                     ),
                                   ],
                                 ),
@@ -1428,77 +1711,108 @@ class _FloorManagementScreenState extends State<FloorManagementScreen> with Widg
                                           Row(
                                             children: [
                                               Expanded(
-                                                child: SizedBox(
+                                                child: Container(
+                                                  height: 42,
+                                                  decoration: BoxDecoration(
+                                                    gradient: LinearGradient(
+                                                      colors: [
+                                                        Colors.orange.shade400,
+                                                        Colors.orange.shade600,
+                                                      ],
+                                                      begin: Alignment.topLeft,
+                                                      end: Alignment.bottomRight,
+                                                    ),
+                                                    borderRadius: BorderRadius.circular(14),
+                                                    boxShadow: [
+                                                      BoxShadow(
+                                                        color: Colors.orange.shade200.withOpacity(0.6),
+                                                        blurRadius: 8,
+                                                        offset: const Offset(0, 3),
+                                                      ),
+                                                    ],
+                                                  ),
                                                   child: ElevatedButton.icon(
-                                                    onPressed: () =>
-                                                        _showCameraOptions(
-                                                            room),
+                                                    onPressed: () => _showCameraOptions(room),
                                                     icon: const Icon(
                                                       Icons.camera_alt_rounded,
-                                                      size: 12,
+                                                      size: 16,
+                                                      color: Colors.white,
                                                     ),
                                                     label: const Text(
-                                                      '拍照',
-                                                      style: TextStyle(
-                                                        fontSize: 12,
-                                                        fontWeight: FontWeight
-                                                            .w600,
-                                                      ),
+                                                      '',
                                                     ),
-                                                    style: ElevatedButton
-                                                        .styleFrom(
-                                                      backgroundColor: AppTheme
-                                                          .warning,
-                                                      foregroundColor: Colors
-                                                          .white,
+                                                    style: ElevatedButton.styleFrom(
+                                                      backgroundColor: Colors.transparent,
+                                                      shadowColor: Colors.transparent,
                                                       elevation: 0,
                                                       shape: RoundedRectangleBorder(
-                                                        borderRadius: BorderRadius
-                                                            .circular(12),
+                                                        borderRadius: BorderRadius.circular(14),
                                                       ),
                                                     ),
                                                   ),
                                                 ),
                                               ),
-                                              const SizedBox(width: 8),
-                                              SizedBox(
-                                                width: 40,
-                                                height: 40,
+                                              const SizedBox(width: 10),
+                                              Container(
+                                                width: 42,
+                                                height: 42,
+                                                decoration: BoxDecoration(
+                                                  color: Colors.grey.shade50,
+                                                  borderRadius: BorderRadius.circular(14),
+                                                  border: Border.all(
+                                                    color: Colors.grey.shade200,
+                                                    width: 1,
+                                                  ),
+                                                  boxShadow: [
+                                                    BoxShadow(
+                                                      color: Colors.grey.shade200.withOpacity(0.5),
+                                                      blurRadius: 4,
+                                                      offset: const Offset(0, 2),
+                                                    ),
+                                                  ],
+                                                ),
                                                 child: Material(
-                                                  color: Colors.grey.shade100,
-                                                  borderRadius: BorderRadius
-                                                      .circular(12),
+                                                  color: Colors.transparent,
+                                                  borderRadius: BorderRadius.circular(14),
                                                   child: InkWell(
-                                                    borderRadius: BorderRadius
-                                                        .circular(12),
-                                                    onTap: () =>
-                                                        _editRoom(room),
+                                                    borderRadius: BorderRadius.circular(14),
+                                                    onTap: () => _editRoom(room),
                                                     child: const Icon(
                                                       Icons.edit_rounded,
-                                                      color: AppTheme
-                                                          .primaryBlue,
+                                                      color: Colors.blue,
                                                       size: 20,
                                                     ),
                                                   ),
                                                 ),
                                               ),
-                                              const SizedBox(width: 6),
-                                              SizedBox(
-                                                width: 40,
-                                                height: 40,
-                                                child: Material(
+                                              const SizedBox(width: 8),
+                                              Container(
+                                                width: 42,
+                                                height: 42,
+                                                decoration: BoxDecoration(
                                                   color: Colors.red.shade50,
-                                                  borderRadius: BorderRadius
-                                                      .circular(12),
+                                                  borderRadius: BorderRadius.circular(14),
+                                                  border: Border.all(
+                                                    color: Colors.red.shade200,
+                                                    width: 1,
+                                                  ),
+                                                  boxShadow: [
+                                                    BoxShadow(
+                                                      color: Colors.red.shade200.withOpacity(0.5),
+                                                      blurRadius: 4,
+                                                      offset: const Offset(0, 2),
+                                                    ),
+                                                  ],
+                                                ),
+                                                child: Material(
+                                                  color: Colors.transparent,
+                                                  borderRadius: BorderRadius.circular(14),
                                                   child: InkWell(
-                                                    borderRadius: BorderRadius
-                                                        .circular(12),
-                                                    onTap: () =>
-                                                        _deleteRoom(room),
+                                                    borderRadius: BorderRadius.circular(14),
+                                                    onTap: () => _deleteRoom(room),
                                                     child: Icon(
                                                       Icons.delete_rounded,
-                                                      color: Colors.red
-                                                          .shade400,
+                                                      color: Colors.red.shade500,
                                                       size: 20,
                                                     ),
                                                   ),
