@@ -405,13 +405,11 @@ class StorageService {
   // 获取指定房间在指定月份的租金配置
   static Future<RentConfig?> getRentConfigForMonth(int floor, String roomNumber, DateTime month) async {
     final configs = await getRentConfigsByRoom(floor, roomNumber);
-    
     for (final config in configs) {
       if (config.isValidForMonth(month)) {
         return config;
       }
     }
-    
     return null;
   }
 

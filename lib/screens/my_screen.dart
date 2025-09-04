@@ -326,7 +326,7 @@ class _MyScreenState extends State<MyScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  '燃气表管理员',
+                                  '管理员',
                                   style: TextStyle(
                                     fontSize: 20,
                                     fontWeight: FontWeight.bold,

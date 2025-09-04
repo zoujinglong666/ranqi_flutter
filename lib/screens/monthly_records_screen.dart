@@ -76,7 +76,7 @@ class _MonthlyRecordsScreenState extends State<MonthlyRecordsScreen> {
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
       appBar: AppBar(
-        title: Text('本月记录'),
+        title: const Text('本月记录'),
         backgroundColor: Colors.white,
         foregroundColor: Colors.black,
         elevation: 0,
@@ -412,26 +412,122 @@ class _MonthlyRecordsScreenState extends State<MonthlyRecordsScreen> {
   }
 
   void _showMonthPicker() {
+    // 当前选中的年月
+    int selectedYear = _selectedMonth.year;
+    int selectedMonth = _selectedMonth.month;
+    
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text('选择月份'),
-        content: Container(
-          width: 300,
-          height: 300,
-          child: YearPicker(
-            firstDate: DateTime(2020),
-            lastDate: DateTime.now(),
-            selectedDate: _selectedMonth,
-            onChanged: (date) {
-              Navigator.pop(context);
-              setState(() {
-                _selectedMonth = DateTime(date.year, date.month);
-                _filterRecordsByMonth();
-              });
-            },
-          ),
-        ),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setStateDialog) {
+          return AlertDialog(
+            title: Text('选择年月'),
+            content: Container(
+              width: 300,
+              height: 300,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // 年份选择器
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      IconButton(
+                        icon: Icon(Icons.arrow_back_ios),
+                        onPressed: () {
+                          setStateDialog(() {
+                            selectedYear--;
+                          });
+                        },
+                      ),
+                      Text(
+                        '$selectedYear年',
+                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      ),
+                      IconButton(
+                        icon: Icon(Icons.arrow_forward_ios),
+                        onPressed: () {
+                          final currentYear = DateTime.now().year;
+                          if (selectedYear < currentYear) {
+                            setStateDialog(() {
+                              selectedYear++;
+                            });
+                          }
+                        },
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 20),
+                  // 月份网格
+                  Expanded(
+                    child: GridView.builder(
+                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 3,
+                        childAspectRatio: 1.5,
+                        crossAxisSpacing: 10,
+                        mainAxisSpacing: 10,
+                      ),
+                      itemCount: 12,
+                      itemBuilder: (context, index) {
+                        final month = index + 1;
+                        final isSelected = month == selectedMonth;
+                        final isCurrentYearMonth = selectedYear == DateTime.now().year && 
+                                                  month > DateTime.now().month;
+                        
+                        return GestureDetector(
+                          onTap: isCurrentYearMonth ? null : () {
+                            setStateDialog(() {
+                              selectedMonth = month;
+                            });
+                          },
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: isSelected ? AppTheme.primaryBlue : Colors.grey.shade200,
+                              borderRadius: BorderRadius.circular(8),
+                              border: isSelected 
+                                  ? Border.all(color: AppTheme.primaryBlue, width: 2)
+                                  : null,
+                            ),
+                            alignment: Alignment.center,
+                            child: Text(
+                              '$month月',
+                              style: TextStyle(
+                                color: isSelected 
+                                    ? Colors.white 
+                                    : isCurrentYearMonth 
+                                        ? Colors.grey.shade400
+                                        : Colors.black,
+                                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                },
+                child: Text('取消'),
+              ),
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  setState(() {
+                    _selectedMonth = DateTime(selectedYear, selectedMonth);
+                    _filterRecordsByMonth();
+                  });
+                },
+                child: Text('确定'),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
