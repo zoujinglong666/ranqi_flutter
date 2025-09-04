@@ -132,7 +132,7 @@ class _RentManagementScreenState extends State<RentManagementScreen> {
                         SizedBox(width: 12),
                         Text(
                           '${existingConfig != null ? '编辑' : '添加'}租金配置',
-                          style: TextStyle(
+                          style: const TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.bold,
                             color: AppTheme.primaryBlue,

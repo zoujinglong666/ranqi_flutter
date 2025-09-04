@@ -217,7 +217,7 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
 
   Widget _buildLoginForm() {
     return Container(
-      padding: EdgeInsets.all(AppTheme.spacingL + 4),
+      padding: const EdgeInsets.all(AppTheme.spacingL + 4),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(AppTheme.radiusLarge + 4),
@@ -225,7 +225,7 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
           BoxShadow(
             color: Colors.black.withOpacity(0.08),
             blurRadius: 24,
-            offset: Offset(0, 12),
+            offset: const Offset(0, 12),
             spreadRadius: 0,
           ),
           BoxShadow(
