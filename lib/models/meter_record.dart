@@ -15,6 +15,10 @@ class MeterRecord {
   final List<RecognitionDetail>? recognitionDetails; // 识别详情列表
   final bool isManuallyEdited; // 是否手动修正
 
+  // Getter方法，用于兼容现有代码
+  String get roomName => '$floor-$roomNumber';
+  String get meterReading => recognitionResult;
+
   MeterRecord({
     required this.id,
     required this.imagePath,

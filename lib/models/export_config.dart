@@ -102,7 +102,7 @@ class ExportConfig {
       bankName: '中国工商银行',
       accountNumber: '6222 0000 0000 0000',
       accountName: '请设置收款人姓名',
-      watermarkText: '燃气管理系统',
+      watermarkText: '智能抄表系统',
       showWatermark: true,
       reportFooter: '如有疑问，请及时联系管理员',
     );

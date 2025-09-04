@@ -597,7 +597,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               ),
                               const SizedBox(height: AppTheme.spacingM),
                               Text(
-                                '拍摄燃气表读数',
+                                '拍摄仪表读数',
                                 style: TextStyle(
                                   fontSize: AppTheme.fontSizeSubtitle,
                                   fontWeight: FontWeight.w500,

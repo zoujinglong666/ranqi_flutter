@@ -17,6 +17,10 @@ class Room {
   final double? serviceFee; // 服务费（可为空）
   final double? cleaningFee; // 卫生费（可为空）
 
+  // Getter方法，用于兼容现有代码
+  String get name => '$floor-$roomNumber';
+  String get floorName => '$floor楼';
+
   Room({
     required this.id,
     required this.floor,

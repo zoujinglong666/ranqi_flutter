@@ -3,6 +3,9 @@ import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 import 'management_screen.dart';
 import 'all_records_screen.dart';
+import 'total_records_screen.dart';
+import 'monthly_records_screen.dart';
+import 'rooms_overview_screen.dart';
 import '../services/storage_service.dart';
 
 class MyScreen extends StatefulWidget {
@@ -33,6 +36,12 @@ class _MyScreenState extends State<MyScreen> {
             icon: Icons.assessment_rounded,
             color: Colors.white,
             textColor: AppTheme.primaryBlue,
+            onTap: _isLoading ? null : () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => TotalRecordsScreen()),
+              );
+            },
           ),
         ),
         SizedBox(width: 12),
@@ -43,6 +52,12 @@ class _MyScreenState extends State<MyScreen> {
             icon: Icons.calendar_today_rounded,
             color: Colors.white,
             textColor: Colors.green.shade600,
+            onTap: _isLoading ? null : () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => MonthlyRecordsScreen()),
+              );
+            },
           ),
         ),
         SizedBox(width: 12),
@@ -53,59 +68,69 @@ class _MyScreenState extends State<MyScreen> {
             icon: Icons.home_rounded,
             color: Colors.white,
             textColor: Colors.orange.shade600,
+            onTap: _isLoading ? null : () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => RoomsOverviewScreen()),
+              );
+            },
           ),
         ),
       ],
     );
   }
 
-  // 构建统计卡片
+  // 构建统计卡片（可点击）
   Widget _buildStatCard({
     required String title,
     required String value,
     required IconData icon,
     required Color color,
     required Color textColor,
+    VoidCallback? onTap,
   }) {
-    return Container(
-      padding: EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: color,
-        borderRadius: BorderRadius.circular(10),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 3,
-            offset: Offset(0, 1),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          Icon(
-            icon,
-            color: textColor,
-            size: 20,
-          ),
-          SizedBox(height: 6),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: color,
+          borderRadius: BorderRadius.circular(10),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 3,
+              offset: Offset(0, 1),
+            ),
+          ],
+        ),
+        child: Column(
+          children: [
+            Icon(
+              icon,
               color: textColor,
+              size: 20,
             ),
-          ),
-          SizedBox(height: 2),
-          Text(
-            title,
-            style: TextStyle(
-              fontSize: 10,
-              color: textColor.withOpacity(0.7),
-              fontWeight: FontWeight.w500,
+            SizedBox(height: 6),
+            Text(
+              value,
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: textColor,
+              ),
             ),
-          ),
-        ],
+            SizedBox(height: 2),
+            Text(
+              title,
+              style: TextStyle(
+                fontSize: 10,
+                color: textColor.withOpacity(0.7),
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

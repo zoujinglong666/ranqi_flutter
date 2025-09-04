@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
-import '../models/tab_item.dart';
-import '../screens/home_screen.dart';
-import '../screens/floor_management_screen.dart';
-import '../screens/my_screen.dart';
 
+import '../models/tab_item.dart';
+import '../screens/floor_management_screen.dart';
+import '../screens/home_screen.dart';
+import '../screens/my_screen.dart';
+import '../services/tab_manager.dart';
+
+final tabManager = TabManager();
 /// Tab配置类
 class TabConfig {
   /// 获取默认的Tab配置
@@ -16,7 +19,10 @@ class TabConfig {
         activeIcon: Icons.camera_alt,
         screen: HomeScreen(),
         isVisible: true,
-      ),
+          onTap: () {
+            tabManager.setTabBadge('home', showBadge: true);
+            print('识别');
+          }),
       TabItem(
         id: 'floor',
         label: '楼层',
@@ -24,7 +30,12 @@ class TabConfig {
         activeIcon: Icons.apartment,
         screen: FloorManagementScreen(),
         isVisible: true,
-      ),
+          showBadge: true,
+          onTap: () {
+            final tabManager = TabManager();
+            tabManager.setTabBadge('floor', showBadge: false);
+            print('点击了楼层');
+          }),
       TabItem(
         id: 'profile',
         label: '我的',
