@@ -1795,6 +1795,7 @@ class _MonthlyReportScreenState extends State<MonthlyReportScreen> {
         month: _selectedMonth,
         periodType: _selectedPeriodType.displayName,
         config: exportConfig,
+        context: context,
       );
       
       // 关闭加载对话框
@@ -1882,6 +1883,7 @@ class _MonthlyReportScreenState extends State<MonthlyReportScreen> {
             month: _selectedMonth,
             periodType: _selectedPeriodType.displayName,
             config: exportConfig,
+            context: context,
           );
           if (success) {
             successCount++;
@@ -2011,6 +2013,7 @@ class _MonthlyReportScreenState extends State<MonthlyReportScreen> {
         month: _selectedMonth,
         periodType: _selectedPeriodType.displayName,
         config: exportConfig,
+        context: context,
       );
 
       // 关闭加载对话框
@@ -2089,6 +2092,7 @@ class _MonthlyReportScreenState extends State<MonthlyReportScreen> {
         month: _selectedMonth,
         periodType: _selectedPeriodType.displayName,
         config: exportConfig,
+        context: context,
       );
 
       // 关闭加载对话框

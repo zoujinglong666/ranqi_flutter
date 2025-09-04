@@ -215,6 +215,7 @@ class ExportService {
     required int month,
     String? periodType,
     ExportConfig? config,
+    required BuildContext context,
   }) async {
     try {
       // 获取导出配置
@@ -225,6 +226,7 @@ class ExportService {
       
       // 创建报表Widget
       final reportWidget = _buildReportWidget(
+        context: context,
         roomData: roomData,
         year: year,
         month: month,
@@ -258,6 +260,7 @@ class ExportService {
     required int month,
     String? periodType,
     ExportConfig? config,
+    required BuildContext context,
   }) async {
     try {
       // 获取导出配置
@@ -268,6 +271,7 @@ class ExportService {
       
       // 创建报表Widget
       final reportWidget = _buildReportWidget(
+        context: context,
         roomData: roomData,
         year: year,
         month: month,
@@ -291,40 +295,142 @@ class ExportService {
   }
 
   /// 构建报表Widget
+  // static Widget _buildReportWidget({
+  //   required FeeCalculationResult roomData,
+  //   required int year,
+  //   required int month,
+  //   required String periodType,
+  //   required ExportConfig exportConfig,
+  // }) {
+  //   // 动态计算尺寸，支持不同屏幕比例
+  //   const double baseWidth = 1080;
+  //   const double baseHeight = 1920;
+  //   const double aspectRatio = baseWidth / baseHeight;
+  //
+  //   return MediaQuery(
+  //     data: const MediaQueryData(
+  //       size: Size(baseWidth, baseHeight),
+  //       devicePixelRatio: 2.0,
+  //       textScaleFactor: 1.0,
+  //     ),
+  //     child: Directionality(
+  //       textDirection: TextDirection.ltr,
+  //       child: Container(
+  //         width: baseWidth,
+  //         height: baseHeight,
+  //         decoration: const BoxDecoration(
+  //           gradient: LinearGradient(
+  //             begin: Alignment.topCenter,
+  //             end: Alignment.bottomCenter,
+  //             colors: [Color(0xFF4F46E5), Color(0xFF7C3AED)],
+  //           ),
+  //         ),
+  //         child: Container(
+  //           decoration: BoxDecoration(
+  //             color: Colors.white,
+  //             borderRadius: BorderRadius.circular(16),
+  //             boxShadow: [
+  //               BoxShadow(
+  //                 color: Colors.black.withOpacity(0.15),
+  //                 blurRadius: 30,
+  //                 offset: const Offset(0, 15),
+  //               ),
+  //             ],
+  //           ),
+  //           child: Stack(
+  //             children: [
+  //               // 主要内容
+  //               Positioned.fill(
+  //                 child: Padding(
+  //                   padding: const EdgeInsets.all(16),
+  //                   child: Column(
+  //                     crossAxisAlignment: CrossAxisAlignment.stretch,
+  //                     children: [
+  //                       // 头部 - 固定高度
+  //                       _buildReportHeader(roomData, exportConfig),
+  //                       const SizedBox(height: 8),
+  //
+  //                       // 时间段 - 固定高度
+  //                       _buildPeriodInfo(periodType, year, month),
+  //                       const SizedBox(height: 8),
+  //
+  //                       // 费用网格 - 占用剩余空间
+  //                       Container(
+  //                         padding: const EdgeInsets.symmetric(vertical: 8),
+  //                         child: _buildFeesGrid(roomData),
+  //                       ),
+  //                       const SizedBox(height: 12),
+  //
+  //                       // 总计 - 固定高度
+  //                       _buildTotalSection(roomData),
+  //                       const SizedBox(height: 8),
+  //
+  //                       // 付款信息 - 固定高度
+  //                       _buildPaymentInfo(exportConfig),
+  //                       const SizedBox(height: 6),
+  //
+  //                       // 页脚 - 固定高度
+  //                       _buildFooter(exportConfig),
+  //                     ],
+  //                   ),
+  //                 ),
+  //               ),
+  //               // 水印 - 平铺效果（置于最上层）
+  //               if (exportConfig.enableWatermark)
+  //                 Positioned.fill(
+  //                   child: CustomPaint(
+  //                     painter: WatermarkPainter(
+  //                       text: exportConfig.watermarkText,
+  //                       textStyle: TextStyle(
+  //                         fontSize: 24,
+  //                         color: Colors.grey.withOpacity(0.06),
+  //                         fontWeight: FontWeight.w400,
+  //                       ),
+  //                     ),
+  //                   ),
+  //                 ),
+  //             ],
+  //           ),
+  //         ),
+  //       ),
+  //     ),
+  //   );
+  // }
+
+
   static Widget _buildReportWidget({
+    required BuildContext context,
     required FeeCalculationResult roomData,
     required int year,
     required int month,
     required String periodType,
     required ExportConfig exportConfig,
   }) {
-    // 动态计算尺寸，支持不同屏幕比例
-    const double baseWidth = 1080;
-    const double baseHeight = 1920;
-    const double aspectRatio = baseWidth / baseHeight;
-    
+    final Size screenSize = MediaQuery.of(context).size;
+    final double width = screenSize.width;
+    final double height = screenSize.height;
+
     return MediaQuery(
-      data: const MediaQueryData(
-        size: Size(baseWidth, baseHeight),
+      data: MediaQuery.of(context).copyWith(
         devicePixelRatio: 2.0,
         textScaleFactor: 1.0,
       ),
       child: Directionality(
         textDirection: TextDirection.ltr,
         child: Container(
-          width: baseWidth,
-          height: baseHeight,
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [Color(0xFF4F46E5), Color(0xFF7C3AED)],
-            ),
-          ),
+          width: width,
+          height: height,
+          // decoration: const BoxDecoration(
+          //   gradient: LinearGradient(
+          //     begin: Alignment.topCenter,
+          //     end: Alignment.bottomCenter,
+          //     colors: [Color(0xFF4F46E5), Color(0xFF7C3AED)],
+          //   ),
+          // ),
           child: Container(
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
+              // borderRadius: BorderRadius.circular(16),
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withOpacity(0.15),
@@ -335,43 +441,32 @@ class ExportService {
             ),
             child: Stack(
               children: [
-                // 主要内容
                 Positioned.fill(
                   child: Padding(
                     padding: const EdgeInsets.all(16),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        // 头部 - 固定高度
                         _buildReportHeader(roomData, exportConfig),
                         const SizedBox(height: 8),
-                        
-                        // 时间段 - 固定高度
                         _buildPeriodInfo(periodType, year, month),
                         const SizedBox(height: 8),
-
-                        // 费用网格 - 占用剩余空间
-                        Container(
-                          padding: const EdgeInsets.symmetric(vertical: 8),
-                          child: _buildFeesGrid(roomData),
+                        Expanded(
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            child: _buildFeesGrid(roomData),
+                          ),
                         ),
                         const SizedBox(height: 12),
-
-                        // 总计 - 固定高度
                         _buildTotalSection(roomData),
                         const SizedBox(height: 8),
-                        
-                        // 付款信息 - 固定高度
                         _buildPaymentInfo(exportConfig),
                         const SizedBox(height: 6),
-                        
-                        // 页脚 - 固定高度
                         _buildFooter(exportConfig),
                       ],
                     ),
                   ),
                 ),
-                // 水印 - 平铺效果（置于最上层）
                 if (exportConfig.enableWatermark)
                   Positioned.fill(
                     child: CustomPaint(
@@ -393,9 +488,10 @@ class ExportService {
     );
   }
 
+
   static Widget _buildReportHeader(FeeCalculationResult roomData, ExportConfig exportConfig) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 0),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
           colors: [Color(0xFF4F46E5), Color(0xFF7C3AED)],
@@ -816,16 +912,33 @@ class ExportService {
       htmlBuffer.writeln('<title>房间费用报表 - ${roomData.floor}-${roomData.roomNumber}</title>');
       htmlBuffer.writeln('<style>');
       htmlBuffer.writeln('''
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;500;600;700;800&display=swap');
         
         * { margin: 0; padding: 0; box-sizing: border-box; }
         
+        :root {
+          --primary-color: #2563eb;
+          --primary-light: #dbeafe;
+          --primary-dark: #1e40af;
+          --secondary-color: #0ea5e9;
+          --accent-color: #f59e0b;
+          --danger-color: #dc2626;
+          --success-color: #10b981;
+          --text-primary: #1e293b;
+          --text-secondary: #64748b;
+          --bg-light: #f8fafc;
+          --border-light: #e2e8f0;
+          --card-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+        
         body { 
-          font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          font-family: 'Nunito', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+          background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
           min-height: 100vh;
-          padding: 20px;
+          padding: 40px 20px;
           position: relative;
+          color: var(--text-primary);
+          line-height: 1.6;
         }
         
         ${exportConfig.enableWatermark ? '''
@@ -834,30 +947,30 @@ class ExportService {
           position: fixed;
           top: 50%;
           left: 50%;
-          transform: translate(-50%, -50%) rotate(-45deg);
+          transform: translate(-50%, -50%) rotate(-30deg);
           font-size: 120px;
-          color: rgba(255, 255, 255, 0.05);
-          font-weight: bold;
+          color: rgba(37, 99, 235, 0.03);
+          font-weight: 800;
           z-index: 0;
           pointer-events: none;
           white-space: nowrap;
+          letter-spacing: 2px;
         }
         ''' : ''}
         
         .container {
-          max-width: 800px;
+          max-width: 850px;
           margin: 0 auto;
-          background: rgba(255, 255, 255, 0.95);
-          backdrop-filter: blur(20px);
-          border-radius: 24px;
-          box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(255, 255, 255, 0.2);
+          background: #ffffff;
+          border-radius: 16px;
+          box-shadow: var(--card-shadow);
           overflow: hidden;
           position: relative;
           z-index: 1;
         }
         
         .header {
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
           color: white;
           padding: 40px 30px;
           text-align: center;
@@ -871,8 +984,8 @@ class ExportService {
           left: 0;
           right: 0;
           bottom: 0;
-          background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grain" width="100" height="100" patternUnits="userSpaceOnUse"><circle cx="50" cy="50" r="1" fill="%23ffffff" opacity="0.1"/></pattern></defs><rect width="100" height="100" fill="url(%23grain)"/></svg>');
-          opacity: 0.3;
+          background-image: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm63 31c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM34 90c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm56-76c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM12 86c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm28-65c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm23-11c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-6 60c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm29 22c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zM32 63c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm57-13c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-9-21c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM60 91c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM35 41c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM12 60c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2z' fill='%23ffffff' fill-opacity='0.1' fill-rule='evenodd'/%3E%3C/svg%3E");
+          opacity: 0.5;
         }
         
         .company-info {
@@ -881,63 +994,72 @@ class ExportService {
         }
         
         .company-name {
-          font-size: 28px;
-          font-weight: 700;
+          font-size: 32px;
+          font-weight: 800;
           margin-bottom: 8px;
           letter-spacing: -0.5px;
+          text-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
         
         .report-title {
           font-size: 18px;
-          font-weight: 400;
+          font-weight: 500;
           opacity: 0.9;
-          margin-bottom: 20px;
+          margin-bottom: 24px;
+          letter-spacing: 1px;
+          text-transform: uppercase;
         }
         
         .room-badge {
           display: inline-block;
           background: rgba(255, 255, 255, 0.2);
-          padding: 12px 24px;
+          padding: 12px 30px;
           border-radius: 50px;
-          font-size: 20px;
-          font-weight: 600;
+          font-size: 24px;
+          font-weight: 700;
           backdrop-filter: blur(10px);
           border: 1px solid rgba(255, 255, 255, 0.3);
+          box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+          letter-spacing: 1px;
         }
         
         .content {
           padding: 40px 30px;
+          background-color: #ffffff;
         }
         
         .period-info {
           text-align: center;
           margin-bottom: 40px;
           padding: 20px;
-          background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
-          border-radius: 16px;
-          border: 1px solid #e2e8f0;
+          background: linear-gradient(135deg, var(--primary-light) 0%, #e0f2fe 100%);
+          border-radius: 12px;
+          border: 1px solid var(--primary-light);
+          box-shadow: 0 2px 4px rgba(37, 99, 235, 0.1);
         }
         
         .period-text {
-          font-size: 16px;
-          color: #64748b;
-          font-weight: 500;
+          font-size: 18px;
+          color: var(--primary-dark);
+          font-weight: 600;
         }
         
         .fees-grid {
           display: grid;
-          gap: 20px;
+          grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+          gap: 24px;
           margin-bottom: 40px;
         }
         
         .fee-card {
           background: #ffffff;
-          border: 1px solid #e2e8f0;
-          border-radius: 16px;
+          border-radius: 12px;
           padding: 24px;
           transition: all 0.3s ease;
           position: relative;
           overflow: hidden;
+          box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+          border: 1px solid var(--border-light);
         }
         
         .fee-card::before {
@@ -945,67 +1067,76 @@ class ExportService {
           position: absolute;
           top: 0;
           left: 0;
-          width: 4px;
+          width: 6px;
           height: 100%;
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          background: var(--primary-color);
+          border-radius: 3px 0 0 3px;
         }
         
         .fee-card:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+          transform: translateY(-4px);
+          box-shadow: 0 12px 20px rgba(0, 0, 0, 0.1);
         }
         
         .fee-header {
           display: flex;
           justify-content: space-between;
-          align-items: flex-start;
-          margin-bottom: 12px;
+          align-items: center;
+          margin-bottom: 16px;
+          padding-bottom: 12px;
+          border-bottom: 1px dashed var(--border-light);
         }
         
         .fee-label {
-          font-size: 16px;
-          font-weight: 600;
-          color: #1e293b;
+          font-size: 18px;
+          font-weight: 700;
+          color: var(--text-primary);
           display: flex;
           align-items: center;
-          gap: 8px;
+          gap: 10px;
         }
         
         .fee-icon {
-          width: 20px;
-          height: 20px;
-          border-radius: 6px;
+          width: 36px;
+          height: 36px;
+          border-radius: 50%;
           display: flex;
           align-items: center;
           justify-content: center;
-          font-size: 12px;
+          font-size: 18px;
+          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         }
         
         .fee-amount {
           font-size: 24px;
-          font-weight: 700;
-          color: #059669;
+          font-weight: 800;
+          color: var(--success-color);
+          background: rgba(16, 185, 129, 0.1);
+          padding: 6px 12px;
+          border-radius: 8px;
         }
         
         .fee-detail {
-          font-size: 14px;
-          color: #64748b;
-          margin-top: 8px;
-          padding: 12px;
-          background: #f8fafc;
+          font-size: 15px;
+          color: var(--text-secondary);
+          margin-top: 12px;
+          padding: 14px;
+          background: var(--bg-light);
           border-radius: 8px;
-          border-left: 3px solid #e2e8f0;
+          border-left: 4px solid var(--secondary-color);
+          line-height: 1.8;
         }
         
         .total-section {
-          background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+          background: linear-gradient(135deg, var(--danger-color) 0%, #991b1b 100%);
           color: white;
-          padding: 32px;
-          border-radius: 20px;
+          padding: 36px;
+          border-radius: 16px;
           text-align: center;
           margin-bottom: 40px;
           position: relative;
           overflow: hidden;
+          box-shadow: 0 10px 25px rgba(220, 38, 38, 0.2);
         }
         
         .total-section::before {
@@ -1015,110 +1146,151 @@ class ExportService {
           left: -50%;
           width: 200%;
           height: 200%;
-          background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
-          animation: shimmer 3s ease-in-out infinite;
+          background: radial-gradient(circle, rgba(255,255,255,0.15) 0%, transparent 70%);
+          animation: shimmer 4s ease-in-out infinite;
         }
         
         @keyframes shimmer {
-          0%, 100% { transform: translateX(-100%) translateY(-100%); }
-          50% { transform: translateX(0%) translateY(0%); }
+          0%, 100% { transform: translateX(-30%) translateY(-30%) rotate(0deg); }
+          50% { transform: translateX(0%) translateY(0%) rotate(10deg); }
         }
         
         .total-label {
-          font-size: 18px;
-          font-weight: 500;
-          margin-bottom: 12px;
+          font-size: 20px;
+          font-weight: 600;
+          margin-bottom: 16px;
           opacity: 0.9;
           position: relative;
           z-index: 2;
+          letter-spacing: 1px;
+          text-transform: uppercase;
         }
         
         .total-value {
-          font-size: 36px;
+          font-size: 42px;
           font-weight: 800;
           position: relative;
           z-index: 2;
+          text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+          letter-spacing: -0.5px;
         }
         
         .payment-info {
           background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
-          border: 1px solid #0ea5e9;
           border-radius: 16px;
-          padding: 24px;
+          padding: 30px;
           margin-bottom: 30px;
+          box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+          border: 1px solid #bfdbfe;
         }
         
         .payment-title {
-          font-size: 18px;
-          font-weight: 600;
-          color: #0c4a6e;
-          margin-bottom: 16px;
+          font-size: 20px;
+          font-weight: 700;
+          color: var(--primary-dark);
+          margin-bottom: 20px;
           display: flex;
           align-items: center;
-          gap: 8px;
+          gap: 10px;
+          padding-bottom: 12px;
+          border-bottom: 2px solid #bfdbfe;
         }
         
         .payment-details {
           display: grid;
           grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-          gap: 16px;
+          gap: 24px;
         }
         
         .payment-item {
           display: flex;
           flex-direction: column;
-          gap: 4px;
+          gap: 8px;
+          background: rgba(255, 255, 255, 0.7);
+          padding: 16px;
+          border-radius: 10px;
+          border: 1px solid #bfdbfe;
         }
         
         .payment-label {
-          font-size: 12px;
-          color: #64748b;
-          font-weight: 500;
+          font-size: 13px;
+          color: var(--text-secondary);
+          font-weight: 600;
           text-transform: uppercase;
           letter-spacing: 0.5px;
         }
         
         .payment-value {
-          font-size: 16px;
-          font-weight: 600;
-          color: #0c4a6e;
+          font-size: 18px;
+          font-weight: 700;
+          color: var(--primary-dark);
         }
         
         .footer {
           text-align: center;
-          padding: 24px;
-          background: #f8fafc;
-          border-top: 1px solid #e2e8f0;
-          color: #64748b;
+          padding: 30px;
+          background: var(--bg-light);
+          border-top: 1px solid var(--border-light);
+          color: var(--text-secondary);
         }
         
         .footer-text {
-          font-size: 14px;
-          margin-bottom: 8px;
+          font-size: 15px;
+          margin-bottom: 10px;
+          font-weight: 600;
         }
         
         .export-time {
-          font-size: 12px;
-          opacity: 0.7;
+          font-size: 13px;
+          opacity: 0.8;
+          margin-bottom: 8px;
         }
         
         .contact-info {
           margin-top: 16px;
-          font-size: 13px;
+          font-size: 14px;
+          background: rgba(14, 165, 233, 0.1);
+          display: inline-block;
+          padding: 8px 16px;
+          border-radius: 50px;
+          color: var(--secondary-color);
+        }
+        
+        .qr-code {
+          margin-top: 20px;
+          text-align: center;
+        }
+        
+        .qr-code img {
+          width: 120px;
+          height: 120px;
+          border-radius: 8px;
+          border: 4px solid white;
+          box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        .qr-code-text {
+          font-size: 12px;
+          color: var(--text-secondary);
+          margin-top: 8px;
         }
         
         @media (max-width: 768px) {
-          .container { margin: 10px; border-radius: 16px; }
+          body { padding: 20px 10px; }
+          .container { margin: 0; border-radius: 12px; }
           .header { padding: 30px 20px; }
           .content { padding: 30px 20px; }
-          .company-name { font-size: 24px; }
-          .total-value { font-size: 28px; }
+          .company-name { font-size: 26px; }
+          .room-badge { font-size: 20px; }
+          .fees-grid { grid-template-columns: 1fr; }
+          .total-value { font-size: 32px; }
           .payment-details { grid-template-columns: 1fr; }
         }
         
         @media print {
           body { background: white; padding: 0; }
           .container { box-shadow: none; max-width: none; }
+          .fee-card:hover { transform: none; box-shadow: none; }
         }
       ''');
       htmlBuffer.writeln('</style>');
@@ -1131,7 +1303,7 @@ class ExportService {
       htmlBuffer.writeln('<div class="header">');
       htmlBuffer.writeln('<div class="company-info">');
       htmlBuffer.writeln('<div class="company-name">${exportConfig.companyName}</div>');
-      htmlBuffer.writeln('<div class="report-title">房间费用报表</div>');
+      htmlBuffer.writeln('<div class="report-title">房间费用结算单</div>');
       htmlBuffer.writeln('<div class="room-badge">${roomData.floor}-${roomData.roomNumber}</div>');
       htmlBuffer.writeln('</div>');
       htmlBuffer.writeln('</div>');
@@ -1141,7 +1313,7 @@ class ExportService {
       // 时间段信息
       final periodText = _getPeriodText(periodType, year, month);
       htmlBuffer.writeln('<div class="period-info">');
-      htmlBuffer.writeln('<div class="period-text">报表周期：$periodText</div>');
+      htmlBuffer.writeln('<div class="period-text">📅 结算周期：$periodText</div>');
       htmlBuffer.writeln('</div>');
       
       // 费用明细网格
@@ -1152,9 +1324,12 @@ class ExportService {
       htmlBuffer.writeln('<div class="fee-header">');
       htmlBuffer.writeln('<div class="fee-label">');
       htmlBuffer.writeln('<div class="fee-icon" style="background: #fef3c7; color: #d97706;">🏠</div>');
-      htmlBuffer.writeln('租金');
+      htmlBuffer.writeln('房屋租金');
       htmlBuffer.writeln('</div>');
       htmlBuffer.writeln('<div class="fee-amount">¥${roomData.rent.toStringAsFixed(2)}</div>');
+      htmlBuffer.writeln('</div>');
+      htmlBuffer.writeln('<div class="fee-detail">');
+      htmlBuffer.writeln('月度基础租金');
       htmlBuffer.writeln('</div>');
       htmlBuffer.writeln('</div>');
       
@@ -1169,9 +1344,13 @@ class ExportService {
       htmlBuffer.writeln('</div>');
       if (roomData.waterFee.usage > 0) {
         htmlBuffer.writeln('<div class="fee-detail">');
-        htmlBuffer.writeln('用量：${roomData.waterFee.usage.toStringAsFixed(1)} 吨<br>');
-        htmlBuffer.writeln('单价：¥${roomData.waterFee.unitPrice.toStringAsFixed(2)}/吨<br>');
-        htmlBuffer.writeln('读数：${roomData.waterFee.previousReading.toStringAsFixed(1)} → ${roomData.waterFee.currentReading.toStringAsFixed(1)}');
+        htmlBuffer.writeln('<strong>用量:</strong> ${roomData.waterFee.usage.toStringAsFixed(1)} 吨<br>');
+        htmlBuffer.writeln('<strong>单价:</strong> ¥${roomData.waterFee.unitPrice.toStringAsFixed(2)}/吨<br>');
+        htmlBuffer.writeln('<strong>读数变化:</strong> ${roomData.waterFee.previousReading.toStringAsFixed(1)} → ${roomData.waterFee.currentReading.toStringAsFixed(1)}');
+        htmlBuffer.writeln('</div>');
+      } else {
+        htmlBuffer.writeln('<div class="fee-detail">');
+        htmlBuffer.writeln('本期无用水记录');
         htmlBuffer.writeln('</div>');
       }
       htmlBuffer.writeln('</div>');
@@ -1187,9 +1366,13 @@ class ExportService {
       htmlBuffer.writeln('</div>');
       if (roomData.electricFee.usage > 0) {
         htmlBuffer.writeln('<div class="fee-detail">');
-        htmlBuffer.writeln('用量：${roomData.electricFee.usage.toStringAsFixed(1)} 度<br>');
-        htmlBuffer.writeln('单价：¥${roomData.electricFee.unitPrice.toStringAsFixed(2)}/度<br>');
-        htmlBuffer.writeln('读数：${roomData.electricFee.previousReading.toStringAsFixed(1)} → ${roomData.electricFee.currentReading.toStringAsFixed(1)}');
+        htmlBuffer.writeln('<strong>用量:</strong> ${roomData.electricFee.usage.toStringAsFixed(1)} 度<br>');
+        htmlBuffer.writeln('<strong>单价:</strong> ¥${roomData.electricFee.unitPrice.toStringAsFixed(2)}/度<br>');
+        htmlBuffer.writeln('<strong>读数变化:</strong> ${roomData.electricFee.previousReading.toStringAsFixed(1)} → ${roomData.electricFee.currentReading.toStringAsFixed(1)}');
+        htmlBuffer.writeln('</div>');
+      } else {
+        htmlBuffer.writeln('<div class="fee-detail">');
+        htmlBuffer.writeln('本期无用电记录');
         htmlBuffer.writeln('</div>');
       }
       htmlBuffer.writeln('</div>');
@@ -1205,8 +1388,15 @@ class ExportService {
       htmlBuffer.writeln('</div>');
       if (roomData.gasFee.usage > 0) {
         htmlBuffer.writeln('<div class="fee-detail">');
-        htmlBuffer.writeln('用量：${roomData.gasFee.usage.toStringAsFixed(1)} 立方米<br>');
-        htmlBuffer.writeln('单价：¥${roomData.gasFee.unitPrice.toStringAsFixed(2)}/立方米');
+        htmlBuffer.writeln('<strong>用量:</strong> ${roomData.gasFee.usage.toStringAsFixed(1)} 立方米<br>');
+        htmlBuffer.writeln('<strong>单价:</strong> ¥${roomData.gasFee.unitPrice.toStringAsFixed(2)}/立方米<br>');
+        if (roomData.gasFee.previousReading > 0 || roomData.gasFee.currentReading > 0) {
+          htmlBuffer.writeln('<strong>读数变化:</strong> ${roomData.gasFee.previousReading.toStringAsFixed(1)} → ${roomData.gasFee.currentReading.toStringAsFixed(1)}');
+        }
+        htmlBuffer.writeln('</div>');
+      } else {
+        htmlBuffer.writeln('<div class="fee-detail">');
+        htmlBuffer.writeln('本期无燃气使用记录');
         htmlBuffer.writeln('</div>');
       }
       htmlBuffer.writeln('</div>');
@@ -1220,6 +1410,9 @@ class ExportService {
       htmlBuffer.writeln('</div>');
       htmlBuffer.writeln('<div class="fee-amount">¥${roomData.publicServiceFee.toStringAsFixed(2)}</div>');
       htmlBuffer.writeln('</div>');
+      htmlBuffer.writeln('<div class="fee-detail">');
+      htmlBuffer.writeln('包含公共区域维护、安保服务等费用');
+      htmlBuffer.writeln('</div>');
       htmlBuffer.writeln('</div>');
       
       // 卫生费卡片
@@ -1230,6 +1423,9 @@ class ExportService {
       htmlBuffer.writeln('卫生费');
       htmlBuffer.writeln('</div>');
       htmlBuffer.writeln('<div class="fee-amount">¥${roomData.sanitationFee.toStringAsFixed(2)}</div>');
+      htmlBuffer.writeln('</div>');
+      htmlBuffer.writeln('<div class="fee-detail">');
+      htmlBuffer.writeln('包含公共区域清洁、垃圾处理等费用');
       htmlBuffer.writeln('</div>');
       htmlBuffer.writeln('</div>');
       
@@ -1244,7 +1440,7 @@ class ExportService {
       // 付款信息
       htmlBuffer.writeln('<div class="payment-info">');
       htmlBuffer.writeln('<div class="payment-title">');
-      htmlBuffer.writeln('💳 付款信息');
+      htmlBuffer.writeln('💳 付款方式');
       htmlBuffer.writeln('</div>');
       htmlBuffer.writeln('<div class="payment-details">');
       htmlBuffer.writeln('<div class="payment-item">');
@@ -1275,10 +1471,17 @@ class ExportService {
       if (exportConfig.reportFooter.isNotEmpty) {
         htmlBuffer.writeln('<div class="footer-text">${exportConfig.reportFooter}</div>');
       }
-      htmlBuffer.writeln('<div class="export-time">导出时间：${DateTime.now().toString().substring(0, 19)}</div>');
+      htmlBuffer.writeln('<div class="export-time">生成时间：${DateTime.now().toString().substring(0, 19)}</div>');
       if (exportConfig.contactEmail.isNotEmpty) {
-        htmlBuffer.writeln('<div class="contact-info">联系邮箱：${exportConfig.contactEmail}</div>');
+        htmlBuffer.writeln('<div class="contact-info">📧 ${exportConfig.contactEmail}</div>');
       }
+      
+      // 添加二维码占位符（实际应用中可以替换为真实的二维码）
+      htmlBuffer.writeln('<div class="qr-code">');
+      htmlBuffer.writeln('<img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj48cGF0aCBmaWxsPSIjMjU2M2ViIiBkPSJNMCAwaDEwMHYxMDBIMHoiLz48cGF0aCBmaWxsPSIjZmZmIiBkPSJNMzAgMzBoNDB2NDBIMzB6Ii8+PHBhdGggZmlsbD0iIzI1NjNlYiIgZD0iTTQwIDQwaDIwdjIwSDQweiIvPjwvc3ZnPg==" alt="付款二维码"/>');
+      htmlBuffer.writeln('<div class="qr-code-text">扫码支付费用</div>');
+      htmlBuffer.writeln('</div>');
+      
       htmlBuffer.writeln('</div>');
       
       htmlBuffer.writeln('</div>'); // 结束 container
