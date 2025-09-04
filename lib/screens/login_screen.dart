@@ -89,38 +89,64 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
 
   @override
   Widget build(BuildContext context) {
+    final keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
+    final screenHeight = MediaQuery.of(context).size.height;
+    final isKeyboardVisible = keyboardHeight > 0;
+    
     return Scaffold(
       backgroundColor: AppTheme.backgroundPrimary,
+      resizeToAvoidBottomInset: true,
       body: SafeArea(
         child: FadeTransition(
           opacity: _fadeAnimation,
           child: SlideTransition(
             position: _slideAnimation,
-            child: SingleChildScrollView(
-              padding: EdgeInsets.all(AppTheme.spacingL),
-              child: Column(
-                children: [
-                  SizedBox(height: AppTheme.spacingXXL),
-                  
-                  // Logo 和标题区域
-                  _buildHeader(),
-                  
-                  SizedBox(height: AppTheme.spacingXXL),
-                  
-                  // 登录表单
-                  _buildLoginForm(),
-                  
-                  SizedBox(height: AppTheme.spacingXL),
-                  
-                  // 登录按钮
-                  _buildLoginButton(),
-                  //
-                  // SizedBox(height: AppTheme.spacingL),
-                  //
-                  // // 其他选项
-                  // _buildFooterOptions(),
-                ],
-              ),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                return SingleChildScrollView(
+                  physics: ClampingScrollPhysics(),
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      minHeight: constraints.maxHeight,
+                    ),
+                    child: IntrinsicHeight(
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: AppTheme.spacingL,
+                          vertical: isKeyboardVisible ? AppTheme.spacingM : AppTheme.spacingL,
+                        ),
+                        child: Column(
+                          children: [
+                            // 动态顶部间距
+                            SizedBox(height: isKeyboardVisible ? AppTheme.spacingM : AppTheme.spacingXXL),
+                            
+                            // Logo 和标题区域 - 键盘弹出时缩小
+                            _buildHeader(isCompact: isKeyboardVisible),
+                            
+                            // 动态间距
+                            SizedBox(height: isKeyboardVisible ? AppTheme.spacingL : AppTheme.spacingXL),
+                            
+                            // 登录表单
+                            _buildLoginForm(),
+                            
+                            // 动态间距
+                            SizedBox(height: isKeyboardVisible ? AppTheme.spacingL : AppTheme.spacingXL),
+                            
+                            // 登录按钮 - 始终保持在合适位置
+                            _buildLoginButton(),
+                            
+                            // 底部弹性空间
+                            if (!isKeyboardVisible) Spacer(),
+                            
+                            // 底部安全间距
+                            SizedBox(height: AppTheme.spacingM),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              },
             ),
           ),
         ),
@@ -128,13 +154,13 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
     );
   }
 
-  Widget _buildHeader() {
+  Widget _buildHeader({bool isCompact = false}) {
     return Column(
       children: [
-        // Logo 容器
+        // Logo 容器 - 键盘弹出时缩小
         Container(
-          width: 120,
-          height: 120,
+          width: isCompact ? 80 : 120,
+          height: isCompact ? 80 : 120,
           decoration: BoxDecoration(
             gradient: LinearGradient(
               colors: [
@@ -145,46 +171,74 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
               end: Alignment.bottomRight,
             ),
             borderRadius: BorderRadius.circular(AppTheme.radiusXLarge),
-            boxShadow: AppTheme.elevatedShadow,
+            boxShadow: [
+              BoxShadow(
+                color: AppTheme.primaryBlue.withOpacity(0.3),
+                blurRadius: 20,
+                offset: Offset(0, 8),
+                spreadRadius: 0,
+              ),
+            ],
           ),
           child: Icon(
             Icons.local_gas_station_rounded,
-            size: 60,
+            size: isCompact ? 40 : 60,
             color: Colors.white,
           ),
         ),
         
-        SizedBox(height: AppTheme.spacingL),
+        SizedBox(height: isCompact ? AppTheme.spacingM : AppTheme.spacingL),
         
-        // 应用标题
-        const Text(
+        // 应用标题 - 键盘弹出时调整字体大小
+        Text(
           '智能抄表',
           style: TextStyle(
-            fontSize: AppTheme.fontSizeDisplay + 4,
+            fontSize: isCompact ? AppTheme.fontSizeDisplay : AppTheme.fontSizeDisplay + 4,
             fontWeight: FontWeight.bold,
             color: AppTheme.textPrimary,
+            letterSpacing: 1.2,
           ),
         ),
         
-        SizedBox(height: AppTheme.spacingS),
-        const Text(
-          '智能识别，高效管理',
-          style: TextStyle(
-            fontSize: AppTheme.fontSizeBody,
-            color: AppTheme.textSecondary,
-          ),
-        ),
+        if (!isCompact) ...[
+           SizedBox(height: AppTheme.spacingS),
+           Text(
+             '智能识别，高效管理',
+             style: TextStyle(
+               fontSize: AppTheme.fontSizeBody,
+               color: AppTheme.textSecondary,
+               letterSpacing: 0.5,
+             ),
+           ),
+         ]
       ],
     );
   }
 
   Widget _buildLoginForm() {
     return Container(
-      padding: EdgeInsets.all(AppTheme.spacingL),
+      padding: EdgeInsets.all(AppTheme.spacingL + 4),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
-        boxShadow: AppTheme.cardShadow,
+        borderRadius: BorderRadius.circular(AppTheme.radiusLarge + 4),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 24,
+            offset: Offset(0, 12),
+            spreadRadius: 0,
+          ),
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 6,
+            offset: Offset(0, 4),
+            spreadRadius: 0,
+          ),
+        ],
+        border: Border.all(
+          color: Colors.grey.shade100,
+          width: 1,
+        ),
       ),
       child: Form(
         key: _formKey,
@@ -195,24 +249,20 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
               '登录账户',
               style: TextStyle(
                 fontSize: AppTheme.fontSizeHeading,
-                fontWeight: FontWeight.w600,
+                fontWeight: FontWeight.w700,
                 color: AppTheme.textPrimary,
+                letterSpacing: 0.5,
               ),
             ),
             
-            SizedBox(height: AppTheme.spacingL),
+            SizedBox(height: AppTheme.spacingL + 4),
             
             // 用户名输入框
-            TextFormField(
+            _buildInputField(
               controller: _usernameController,
-              decoration: InputDecoration(
-                labelText: '用户名',
-                hintText: '请输入用户名',
-                prefixIcon: Icon(
-                  Icons.person_outline,
-                  color: AppTheme.primaryBlue,
-                ),
-              ),
+              labelText: '用户名',
+              hintText: '请输入用户名',
+              prefixIcon: Icons.person_outline,
               validator: (value) {
                 if (value == null || value.isEmpty) {
                   return '请输入用户名';
@@ -221,33 +271,15 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
               },
             ),
             
-            SizedBox(height: AppTheme.spacingM),
+            SizedBox(height: AppTheme.spacingL),
             
             // 密码输入框
-            TextFormField(
+            _buildInputField(
               controller: _passwordController,
-              obscureText: !_isPasswordVisible,
-              decoration: InputDecoration(
-                labelText: '密码',
-                hintText: '请输入密码',
-                prefixIcon: Icon(
-                  Icons.lock_outline,
-                  color: AppTheme.primaryBlue,
-                ),
-                suffixIcon: IconButton(
-                  icon: Icon(
-                    _isPasswordVisible
-                        ? Icons.visibility_off_outlined
-                        : Icons.visibility_outlined,
-                    color: AppTheme.textSecondary,
-                  ),
-                  onPressed: () {
-                    setState(() {
-                      _isPasswordVisible = !_isPasswordVisible;
-                    });
-                  },
-                ),
-              ),
+              labelText: '密码',
+              hintText: '请输入密码',
+              prefixIcon: Icons.lock_outline,
+              isPassword: true,
               validator: (value) {
                 if (value == null || value.isEmpty) {
                   return '请输入密码';
@@ -259,38 +291,61 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
               },
             ),
             
-            SizedBox(height: AppTheme.spacingM),
+            SizedBox(height: AppTheme.spacingL),
             
-            // 记住密码选项
+            // 记住密码和注册选项
             Row(
               children: [
-                Checkbox(
-                  value: _rememberMe,
-                  onChanged: (value) {
-                    setState(() {
-                      _rememberMe = value ?? false;
-                    });
-                  },
-                  activeColor: AppTheme.primaryBlue,
+                Transform.scale(
+                  scale: 1.1,
+                  child: Checkbox(
+                    value: _rememberMe,
+                    onChanged: (value) {
+                      setState(() {
+                        _rememberMe = value ?? false;
+                      });
+                    },
+                    activeColor: AppTheme.primaryBlue,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
                 ),
+                SizedBox(width: 4),
                 Text(
                   '记住密码',
                   style: TextStyle(
                     fontSize: AppTheme.fontSizeBody,
                     color: AppTheme.textSecondary,
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
                 Spacer(),
-                TextButton(
-                  onPressed: () {
-                    // 忘记密码逻辑
-                    _showForgotPasswordDialog();
-                  },
-                  child: Text(
-                    '忘记密码？',
-                    style: TextStyle(
-                      fontSize: AppTheme.fontSizeBody,
-                      color: AppTheme.primaryBlue,
+                Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(AppTheme.radiusSmall),
+                  ),
+                  child: TextButton(
+                    onPressed: () {
+                      Navigator.pushNamed(context, '/register');
+                    },
+                    style: TextButton.styleFrom(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: AppTheme.spacingM,
+                        vertical: AppTheme.spacingS,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(AppTheme.radiusSmall),
+                      ),
+                    ),
+                    child: Text(
+                      '注册账号',
+                      style: TextStyle(
+                        fontSize: AppTheme.fontSizeBody,
+                        color: AppTheme.primaryBlue,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
                 ),
@@ -302,29 +357,157 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
     );
   }
 
+  Widget _buildInputField({
+    required TextEditingController controller,
+    required String labelText,
+    required String hintText,
+    required IconData prefixIcon,
+    bool isPassword = false,
+    String? Function(String?)? validator,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.02),
+            blurRadius: 8,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
+      child: TextFormField(
+        controller: controller,
+        obscureText: isPassword ? !_isPasswordVisible : false,
+        style: TextStyle(
+          fontSize: AppTheme.fontSizeBody,
+          fontWeight: FontWeight.w500,
+          color: AppTheme.textPrimary,
+        ),
+        decoration: InputDecoration(
+          labelText: labelText,
+          hintText: hintText,
+          labelStyle: TextStyle(
+            color: AppTheme.textSecondary,
+            fontWeight: FontWeight.w500,
+          ),
+          hintStyle: TextStyle(
+            color: AppTheme.textHint,
+            fontWeight: FontWeight.w400,
+          ),
+          prefixIcon: Container(
+            margin: EdgeInsets.only(right: 12),
+            child: Icon(
+              prefixIcon,
+              color: AppTheme.primaryBlue,
+              size: 22,
+            ),
+          ),
+          suffixIcon: isPassword
+              ? IconButton(
+                  icon: Icon(
+                    _isPasswordVisible
+                        ? Icons.visibility_off_outlined
+                        : Icons.visibility_outlined,
+                    color: AppTheme.textSecondary,
+                    size: 22,
+                  ),
+                  onPressed: () {
+                    setState(() {
+                      _isPasswordVisible = !_isPasswordVisible;
+                    });
+                  },
+                )
+              : null,
+          filled: true,
+          fillColor: Colors.grey.shade50,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+            borderSide: BorderSide(
+              color: Colors.grey.shade200,
+              width: 1.5,
+            ),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+            borderSide: BorderSide(
+              color: Colors.grey.shade200,
+              width: 1.5,
+            ),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+            borderSide: BorderSide(
+              color: AppTheme.primaryBlue,
+              width: 2,
+            ),
+          ),
+          errorBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+            borderSide: BorderSide(
+              color: AppTheme.error,
+              width: 1.5,
+            ),
+          ),
+          focusedErrorBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+            borderSide: BorderSide(
+              color: AppTheme.error,
+              width: 2,
+            ),
+          ),
+          contentPadding: EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 18,
+          ),
+        ),
+        validator: validator,
+      ),
+    );
+  }
+
   Widget _buildLoginButton() {
     return Container(
       width: double.infinity,
-      height: 56,
+      height: 58,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+        boxShadow: [
+          BoxShadow(
+            color: AppTheme.primaryBlue.withOpacity(0.3),
+            blurRadius: 16,
+            offset: Offset(0, 8),
+            spreadRadius: 0,
+          ),
+          BoxShadow(
+            color: AppTheme.primaryBlue.withOpacity(0.1),
+            blurRadius: 6,
+            offset: Offset(0, 2),
+            spreadRadius: 0,
+          ),
+        ],
+      ),
       child: ElevatedButton(
         onPressed: _isLoading ? null : _login,
         style: ElevatedButton.styleFrom(
-          backgroundColor: AppTheme.primaryBlue,
+          backgroundColor: _isLoading ? Colors.grey.shade400 : AppTheme.primaryBlue,
           foregroundColor: Colors.white,
           elevation: 0,
+          shadowColor: Colors.transparent,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
           ),
+          padding: EdgeInsets.symmetric(vertical: 18),
         ),
         child: _isLoading
             ? Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   SizedBox(
-                    width: 20,
-                    height: 20,
+                    width: 22,
+                    height: 22,
                     child: CircularProgressIndicator(
-                      strokeWidth: 2,
+                      strokeWidth: 2.5,
                       valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                     ),
                   ),
@@ -332,8 +515,9 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                   Text(
                     '登录中...',
                     style: TextStyle(
-                      fontSize: AppTheme.fontSizeBody,
+                      fontSize: AppTheme.fontSizeBody + 1,
                       fontWeight: FontWeight.w600,
+                      letterSpacing: 0.5,
                     ),
                   ),
                 ],
@@ -341,106 +525,107 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
             : Text(
                 '登录',
                 style: TextStyle(
-                  fontSize: AppTheme.fontSizeBody,
+                  fontSize: AppTheme.fontSizeBody + 1,
                   fontWeight: FontWeight.w600,
+                  letterSpacing: 1.0,
                 ),
               ),
       ),
     );
   }
 
-  Widget _buildFooterOptions() {
-    return Column(
-      children: [
-        // 分割线
-        Row(
-          children: [
-            Expanded(
-              child: Divider(
-                color: Colors.grey.shade300,
-                thickness: 1,
-              ),
-            ),
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: AppTheme.spacingM),
-              child: Text(
-                '其他方式',
-                style: TextStyle(
-                  fontSize: AppTheme.fontSizeCaption,
-                  color: AppTheme.textHint,
-                ),
-              ),
-            ),
-            Expanded(
-              child: Divider(
-                color: Colors.grey.shade300,
-                thickness: 1,
-              ),
-            ),
-          ],
-        ),
-        
-        SizedBox(height: AppTheme.spacingL),
-        
-        // 快速登录选项
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: [
-            _buildQuickLoginButton(
-              icon: Icons.fingerprint,
-              label: '指纹登录',
-              onTap: () {
-                _showComingSoonDialog('指纹登录');
-              },
-            ),
-            _buildQuickLoginButton(
-              icon: Icons.face,
-              label: '面容登录',
-              onTap: () {
-                _showComingSoonDialog('面容登录');
-              },
-            ),
-            _buildQuickLoginButton(
-              icon: Icons.qr_code_scanner,
-              label: '扫码登录',
-              onTap: () {
-                _showComingSoonDialog('扫码登录');
-              },
-            ),
-          ],
-        ),
-        
-        SizedBox(height: AppTheme.spacingXL),
-        
-        // 注册提示
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              '还没有账户？',
-              style: TextStyle(
-                fontSize: AppTheme.fontSizeBody,
-                color: AppTheme.textSecondary,
-              ),
-            ),
-            TextButton(
-              onPressed: () {
-                _showComingSoonDialog('注册功能');
-              },
-              child: Text(
-                '立即注册',
-                style: TextStyle(
-                  fontSize: AppTheme.fontSizeBody,
-                  color: AppTheme.primaryBlue,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
+  // Widget _buildFooterOptions() {
+  //   return Column(
+  //     children: [
+  //       // 分割线
+  //       Row(
+  //         children: [
+  //           Expanded(
+  //             child: Divider(
+  //               color: Colors.grey.shade300,
+  //               thickness: 1,
+  //             ),
+  //           ),
+  //           Padding(
+  //             padding: EdgeInsets.symmetric(horizontal: AppTheme.spacingM),
+  //             child: Text(
+  //               '其他方式',
+  //               style: TextStyle(
+  //                 fontSize: AppTheme.fontSizeCaption,
+  //                 color: AppTheme.textHint,
+  //               ),
+  //             ),
+  //           ),
+  //           Expanded(
+  //             child: Divider(
+  //               color: Colors.grey.shade300,
+  //               thickness: 1,
+  //             ),
+  //           ),
+  //         ],
+  //       ),
+  //
+  //       SizedBox(height: AppTheme.spacingL),
+  //
+  //       // 快速登录选项
+  //       Row(
+  //         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+  //         children: [
+  //           _buildQuickLoginButton(
+  //             icon: Icons.fingerprint,
+  //             label: '指纹登录',
+  //             onTap: () {
+  //               _showComingSoonDialog('指纹登录');
+  //             },
+  //           ),
+  //           _buildQuickLoginButton(
+  //             icon: Icons.face,
+  //             label: '面容登录',
+  //             onTap: () {
+  //               _showComingSoonDialog('面容登录');
+  //             },
+  //           ),
+  //           _buildQuickLoginButton(
+  //             icon: Icons.qr_code_scanner,
+  //             label: '扫码登录',
+  //             onTap: () {
+  //               _showComingSoonDialog('扫码登录');
+  //             },
+  //           ),
+  //         ],
+  //       ),
+  //
+  //       SizedBox(height: AppTheme.spacingXL),
+  //
+  //       // 注册提示
+  //       Row(
+  //         mainAxisAlignment: MainAxisAlignment.center,
+  //         children: [
+  //           Text(
+  //             '还没有账户？',
+  //             style: TextStyle(
+  //               fontSize: AppTheme.fontSizeBody,
+  //               color: AppTheme.textSecondary,
+  //             ),
+  //           ),
+  //           TextButton(
+  //             onPressed: () {
+  //               Navigator.pushNamed(context, '/register');
+  //             },
+  //             child: Text(
+  //               '立即注册',
+  //               style: TextStyle(
+  //                 fontSize: AppTheme.fontSizeBody,
+  //                 color: AppTheme.primaryBlue,
+  //                 fontWeight: FontWeight.w600,
+  //               ),
+  //             ),
+  //           ),
+  //         ],
+  //       ),
+  //     ],
+  //   );
+  // }
 
   Widget _buildQuickLoginButton({
     required IconData icon,

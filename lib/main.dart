@@ -3,6 +3,7 @@ import 'screens/home_screen.dart';
 import 'screens/floor_management_screen.dart';
 import 'screens/my_screen.dart';
 import 'screens/login_screen.dart';
+import 'screens/register_screen.dart';
 import 'services/migration_service.dart';
 import 'theme/app_theme.dart';
 
@@ -19,6 +20,7 @@ class MyApp extends StatelessWidget {
       initialRoute: '/login',
       routes: {
         '/login': (context) => LoginScreen(),
+        '/register': (context) => RegisterScreen(),
         '/main': (context) => MainScreen(),
       },
       debugShowCheckedModeBanner: false,
