@@ -1,17 +1,19 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
+import 'package:path_provider/path_provider.dart';
 import 'package:uuid/uuid.dart';
-import '../models/room.dart';
+
 import '../models/floor.dart';
 import '../models/meter_record.dart';
-import '../services/storage_service.dart';
+import '../models/room.dart';
 import '../services/event_manager.dart';
 import '../services/recognition_service.dart';
+import '../services/storage_service.dart';
 import '../theme/app_theme.dart';
 import 'room_detail_screen.dart';
 
@@ -22,7 +24,7 @@ class FloorManagementScreen extends StatefulWidget {
 
 class _FloorManagementScreenState extends State<FloorManagementScreen> with WidgetsBindingObserver {
   List<Room> _rooms = [];
-  int _selectedFloor = 1;
+  int? _selectedFloor; // 改为可空类型，没有楼层时为null
   final TextEditingController _floorController = TextEditingController();
   
   // 事件订阅
@@ -56,18 +58,35 @@ class _FloorManagementScreenState extends State<FloorManagementScreen> with Widg
 
   Future<void> _loadRooms() async {
     final rooms = await StorageService.getRooms();
+    final availableFloors = await _getAvailableFloors();
+
     setState(() {
       _rooms = rooms;
+
+      // 智能选择楼层逻辑
+      if (availableFloors.isEmpty) {
+        // 没有楼层时，不选择任何楼层
+        _selectedFloor = null;
+      } else if (availableFloors.length == 1) {
+        // 只有一个楼层时，自动选择并高亮
+        _selectedFloor = availableFloors.first;
+      } else if (_selectedFloor == null ||
+          !availableFloors.contains(_selectedFloor)) {
+        // 当前选择的楼层不存在时，选择第一个可用楼层
+        _selectedFloor = availableFloors.first;
+      }
+      // 如果当前选择的楼层仍然存在，保持不变
     });
   }
 
   Future<List<int>> _getAvailableFloors() async {
     final floors = await StorageService.getAvailableFloors();
-    if (floors.isEmpty) return [1];
-    return floors;
+    return floors; // 不再返回默认的楼层1
   }
 
-  List<Room> _getRoomsForFloor(int floor) {
+  List<Room> _getRoomsForFloor(int? floor) {
+    if (floor == null) return []; // 没有选择楼层时返回空列表
+
     final roomsForFloor = _rooms.where((room) => room.floor == floor && room.roomNumber != '_PLACEHOLDER_').toList();
     // 按房间号排序
     roomsForFloor.sort((a, b) {
@@ -320,7 +339,15 @@ class _FloorManagementScreenState extends State<FloorManagementScreen> with Widg
 
     if (result != null) {
       final roomNumber = result['roomNumber'] as String;
-      
+
+      // 如果没有选择楼层，提示用户先添加楼层
+      if (_selectedFloor == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('请先添加楼层')),
+        );
+        return;
+      }
+
       // 检查房间是否已存在
       final existingRoom = _rooms.firstWhere(
         (room) => room.floor == _selectedFloor && room.roomNumber == roomNumber,
@@ -336,7 +363,7 @@ class _FloorManagementScreenState extends State<FloorManagementScreen> with Widg
 
       final newRoom = Room(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
-        floor: _selectedFloor,
+        floor: _selectedFloor!,
         roomNumber: roomNumber,
         waterPricePerTon: result['waterPricePerTon'] as double,
         electricityPricePerKwh: result['electricityPricePerKwh'] as double,

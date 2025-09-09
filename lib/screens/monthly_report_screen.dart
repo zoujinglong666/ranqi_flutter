@@ -570,7 +570,7 @@ class _MonthlyReportScreenState extends State<MonthlyReportScreen> {
                         child: Column(
                           children: [
                             Container(
-                              padding: const EdgeInsets.all(AppTheme.spacingL),
+                              padding: const EdgeInsets.all(AppTheme.spacingM),
                               decoration: BoxDecoration(
                                 color: AppTheme.primaryBlue.withOpacity(0.1),
                                 borderRadius: BorderRadius.only(
@@ -582,7 +582,7 @@ class _MonthlyReportScreenState extends State<MonthlyReportScreen> {
                                 children: [
                                   Icon(
                                     Icons.analytics,
-                                    color: AppTheme.textPrimary,
+                                    color: AppTheme.primaryBlue,
                                     size: 24,
                                   ),
                                   const SizedBox(width: AppTheme.spacingS),
@@ -1330,9 +1330,19 @@ class _MonthlyReportScreenState extends State<MonthlyReportScreen> {
             duration: Duration(seconds: 5),
             action: SnackBarAction(
               label: '打开文件夹',
-              onPressed: () {
+              onPressed: () async {
                 final directory = File(filePath).parent.path;
-                Process.run('explorer', [directory]);
+                // 确保路径格式正确，并使用await等待进程执行
+                try {
+                  final result = await Process.run('explorer', [directory]);
+                  if (result.exitCode != 0) {
+                    // 如果explorer命令失败，尝试使用url_launcher
+                    print('打开文件夹失败: ${result.stderr}');
+                    // 可以考虑添加备用方法，如使用url_launcher包
+                  }
+                } catch (e) {
+                  print('打开文件夹出错: $e');
+                }
               },
             ),
           ),
@@ -1411,9 +1421,16 @@ class _MonthlyReportScreenState extends State<MonthlyReportScreen> {
             duration: Duration(seconds: 5),
             action: SnackBarAction(
               label: '打开文件夹',
-              onPressed: () {
+              onPressed: () async {
                 final directory = File(filePath).parent.path;
-                Process.run('explorer', [directory]);
+                try {
+                  final result = await Process.run('explorer', [directory]);
+                  if (result.exitCode != 0) {
+                    print('打开文件夹失败: ${result.stderr}');
+                  }
+                } catch (e) {
+                  print('打开文件夹出错: $e');
+                }
               },
             ),
           ),
@@ -1626,9 +1643,16 @@ class _MonthlyReportScreenState extends State<MonthlyReportScreen> {
             duration: Duration(seconds: 5),
             action: SnackBarAction(
               label: '打开文件夹',
-              onPressed: () {
+              onPressed: () async {
                 final directory = File(filePath).parent.path;
-                Process.run('explorer', [directory]);
+                try {
+                  final result = await Process.run('explorer', [directory]);
+                  if (result.exitCode != 0) {
+                    print('打开文件夹失败: ${result.stderr}');
+                  }
+                } catch (e) {
+                  print('打开文件夹出错: $e');
+                }
               },
             ),
           ),
@@ -1683,9 +1707,16 @@ class _MonthlyReportScreenState extends State<MonthlyReportScreen> {
             duration: Duration(seconds: 5),
             action: SnackBarAction(
               label: '打开文件夹',
-              onPressed: () {
+              onPressed: () async {
                 final directory = File(filePath).parent.path;
-                Process.run('explorer', [directory]);
+                try {
+                  final result = await Process.run('explorer', [directory]);
+                  if (result.exitCode != 0) {
+                    print('打开文件夹失败: ${result.stderr}');
+                  }
+                } catch (e) {
+                  print('打开文件夹出错: $e');
+                }
               },
             ),
           ),

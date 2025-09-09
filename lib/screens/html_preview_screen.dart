@@ -90,7 +90,7 @@ class _HtmlPreviewScreenState extends State<HtmlPreviewScreen> {
           if (_isLoading)
             Container(
               color: Colors.white.withOpacity(0.8),
-              child: Center(
+              child: const Center(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
@@ -116,8 +116,8 @@ class _HtmlPreviewScreenState extends State<HtmlPreviewScreen> {
           Navigator.pop(context, true); // 返回true表示用户确认要导出
         },
         backgroundColor: AppTheme.primaryBlue,
-        icon: Icon(Icons.file_download, color: Colors.white),
-        label: Text(
+        icon: const Icon(Icons.file_download, color: Colors.white),
+        label: const Text(
           '确认导出',
           style: TextStyle(
             color: Colors.white,
