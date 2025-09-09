@@ -9,10 +9,10 @@ class DynamicTabBar extends StatelessWidget {
   final Function(int)? onTap;
 
   const DynamicTabBar({
-    Key? key,
+    super.key,
     required this.tabManager,
     this.onTap,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

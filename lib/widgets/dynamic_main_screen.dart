@@ -8,9 +8,9 @@ class DynamicMainScreen extends StatefulWidget {
   final List<TabItem> initialTabs;
 
   const DynamicMainScreen({
-    Key? key,
+    super.key,
     required this.initialTabs,
-  }) : super(key: key);
+  });
 
   @override
   State<DynamicMainScreen> createState() => _DynamicMainScreenState();

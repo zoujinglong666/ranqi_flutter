@@ -466,9 +466,9 @@ class _MonthlyReportScreenState extends State<MonthlyReportScreen> {
   String _getReportTitle() {
     switch (_selectedPeriodType) {
       case TimePeriodType.monthly:
-        return '月度报表 - ${_selectedYear}年${_selectedMonth}月';
+        return '${_selectedYear}年${_selectedMonth}月';
       case TimePeriodType.yearly:
-        return '年度报表 - ${_selectedYear}年';
+        return '${_selectedYear}年';
       case TimePeriodType.halfYear:
         return '近半年报表';
       case TimePeriodType.threeMonths:
@@ -482,7 +482,7 @@ class _MonthlyReportScreenState extends State<MonthlyReportScreen> {
       appBar: AppBar(
         title: Text(
           _getReportTitle(),
-          style: TextStyle(
+          style: const TextStyle(
             fontSize: AppTheme.fontSizeTitle,
             fontWeight: FontWeight.w600,
             color: Colors.white,
