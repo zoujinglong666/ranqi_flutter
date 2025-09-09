@@ -11,6 +11,11 @@ class ExportConfig {
   final String reportFooter;
   final String qrCodeUrl;
   final bool showQrCode;
+  
+  // 新增支付宝和微信收款码字段
+  final String alipayQrCodePath;
+  final String wechatQrCodePath;
+  final bool showPaymentQrCodes;
 
   /// 获取是否启用水印
   bool get enableWatermark => showWatermark;
@@ -28,6 +33,9 @@ class ExportConfig {
     this.reportFooter = '',
     this.qrCodeUrl = '',
     this.showQrCode = false,
+    this.alipayQrCodePath = '',
+    this.wechatQrCodePath = '',
+    this.showPaymentQrCodes = false,
     bool? enableWatermark,
   });
 
@@ -45,6 +53,9 @@ class ExportConfig {
       'reportFooter': reportFooter,
       'qrCodeUrl': qrCodeUrl,
       'showQrCode': showQrCode,
+      'alipayQrCodePath': alipayQrCodePath,
+      'wechatQrCodePath': wechatQrCodePath,
+      'showPaymentQrCodes': showPaymentQrCodes,
     };
   }
 
@@ -62,6 +73,9 @@ class ExportConfig {
       reportFooter: json['reportFooter'] ?? '',
       qrCodeUrl: json['qrCodeUrl'] ?? '',
       showQrCode: json['showQrCode'] ?? false,
+      alipayQrCodePath: json['alipayQrCodePath'] ?? '',
+      wechatQrCodePath: json['wechatQrCodePath'] ?? '',
+      showPaymentQrCodes: json['showPaymentQrCodes'] ?? false,
     );
   }
 
@@ -78,6 +92,9 @@ class ExportConfig {
     String? reportFooter,
     String? qrCodeUrl,
     bool? showQrCode,
+    String? alipayQrCodePath,
+    String? wechatQrCodePath,
+    bool? showPaymentQrCodes,
   }) {
     return ExportConfig(
       companyName: companyName ?? this.companyName,
@@ -92,6 +109,9 @@ class ExportConfig {
       reportFooter: reportFooter ?? this.reportFooter,
       qrCodeUrl: qrCodeUrl ?? this.qrCodeUrl,
       showQrCode: showQrCode ?? this.showQrCode,
+      alipayQrCodePath: alipayQrCodePath ?? this.alipayQrCodePath,
+      wechatQrCodePath: wechatQrCodePath ?? this.wechatQrCodePath,
+      showPaymentQrCodes: showPaymentQrCodes ?? this.showPaymentQrCodes,
     );
   }
 

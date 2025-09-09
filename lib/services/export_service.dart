@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
+import 'dart:convert' show base64Encode;
 
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
@@ -491,7 +492,7 @@ class ExportService {
 
   static Widget _buildReportHeader(FeeCalculationResult roomData, ExportConfig exportConfig) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 0),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
           colors: [Color(0xFF4F46E5), Color(0xFF7C3AED)],
@@ -768,6 +769,11 @@ class ExportService {
           _buildPaymentItem('户名', exportConfig.accountName),
           if (exportConfig.contactPhone.isNotEmpty)
             _buildPaymentItem('联系电话', exportConfig.contactPhone),
+          
+          // 添加收款码显示
+          if (exportConfig.showPaymentQrCodes &&
+              (exportConfig.alipayQrCodePath.isNotEmpty || exportConfig.wechatQrCodePath.isNotEmpty))
+            _buildQrCodesSection(exportConfig),
         ],
       ),
     );
@@ -803,6 +809,100 @@ class ExportService {
           ),
         ],
       ),
+    );
+  }
+
+  static Widget _buildQrCodesSection(ExportConfig exportConfig) {
+    return Column(
+      children: [
+        const SizedBox(height: 12),
+        const Divider(color: Color(0xFF0EA5E9), thickness: 1),
+        const SizedBox(height: 8),
+        const Row(
+          children: [
+            Icon(Icons.qr_code, color: Color(0xFF0EA5E9), size: 16),
+            SizedBox(width: 6),
+            Text(
+              '扫码支付',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF0EA5E9),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: [
+            if (exportConfig.alipayQrCodePath.isNotEmpty && File(exportConfig.alipayQrCodePath).existsSync())
+              _buildQrCodeItem(
+                imagePath: exportConfig.alipayQrCodePath,
+                label: '支付宝',
+                color: Colors.blue,
+              ),
+            if (exportConfig.wechatQrCodePath.isNotEmpty && File(exportConfig.wechatQrCodePath).existsSync())
+              _buildQrCodeItem(
+                imagePath: exportConfig.wechatQrCodePath,
+                label: '微信支付',
+                color: Colors.green,
+              ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  static Widget _buildQrCodeItem({
+    required String imagePath,
+    required String label,
+    required Color color,
+  }) {
+    return Column(
+      children: [
+        Container(
+          width: 80,
+          height: 80,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: color.withOpacity(0.3), width: 2),
+            boxShadow: [
+              BoxShadow(
+                color: color.withOpacity(0.1),
+                blurRadius: 4,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(6),
+            child: Image.file(
+              File(imagePath),
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) {
+                return Container(
+                  color: Colors.grey[200],
+                  child: Icon(
+                    Icons.error,
+                    color: Colors.grey[400],
+                    size: 24,
+                  ),
+                );
+              },
+            ),
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 10,
+            fontWeight: FontWeight.w600,
+            color: color,
+          ),
+        ),
+      ],
     );
   }
 
@@ -1256,6 +1356,53 @@ class ExportService {
           color: var(--secondary-color);
         }
         
+        .qr-codes-section {
+          margin-top: 20px;
+          padding: 20px;
+          background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+          border-radius: 12px;
+          border: 1px solid #bfdbfe;
+        }
+        
+        .qr-codes-title {
+          font-size: 18px;
+          font-weight: 700;
+          color: var(--primary-dark);
+          margin-bottom: 16px;
+          text-align: center;
+        }
+        
+        .qr-codes-container {
+          display: flex;
+          justify-content: center;
+          gap: 30px;
+          flex-wrap: wrap;
+        }
+        
+        .qr-code-item {
+          text-align: center;
+          background: white;
+          padding: 16px;
+          border-radius: 12px;
+          box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+          border: 2px solid #e2e8f0;
+        }
+        
+        .qr-code-image {
+          width: 120px;
+          height: 120px;
+          border-radius: 8px;
+          object-fit: cover;
+          border: 2px solid #f1f5f9;
+        }
+        
+        .qr-code-label {
+          font-size: 14px;
+          font-weight: 600;
+          color: var(--text-primary);
+          margin-top: 8px;
+        }
+        
         .qr-code {
           margin-top: 20px;
           text-align: center;
@@ -1462,6 +1609,34 @@ class ExportService {
         htmlBuffer.writeln('</div>');
       }
       htmlBuffer.writeln('</div>');
+      
+      // 添加收款码显示
+      if (exportConfig.showPaymentQrCodes && 
+          (exportConfig.alipayQrCodePath.isNotEmpty || exportConfig.wechatQrCodePath.isNotEmpty)) {
+        htmlBuffer.writeln('<div class="qr-codes-section">');
+        htmlBuffer.writeln('<div class="qr-codes-title">📱 扫码支付</div>');
+        htmlBuffer.writeln('<div class="qr-codes-container">');
+        
+        if (exportConfig.alipayQrCodePath.isNotEmpty && File(exportConfig.alipayQrCodePath).existsSync()) {
+          final alipayBase64 = await _imageToBase64(exportConfig.alipayQrCodePath);
+          htmlBuffer.writeln('<div class="qr-code-item">');
+          htmlBuffer.writeln('<img src="data:image/jpeg;base64,$alipayBase64" alt="支付宝收款码" class="qr-code-image"/>');
+          htmlBuffer.writeln('<div class="qr-code-label">支付宝</div>');
+          htmlBuffer.writeln('</div>');
+        }
+        
+        if (exportConfig.wechatQrCodePath.isNotEmpty && File(exportConfig.wechatQrCodePath).existsSync()) {
+          final wechatBase64 = await _imageToBase64(exportConfig.wechatQrCodePath);
+          htmlBuffer.writeln('<div class="qr-code-item">');
+          htmlBuffer.writeln('<img src="data:image/jpeg;base64,$wechatBase64" alt="微信收款码" class="qr-code-image"/>');
+          htmlBuffer.writeln('<div class="qr-code-label">微信支付</div>');
+          htmlBuffer.writeln('</div>');
+        }
+        
+        htmlBuffer.writeln('</div>');
+        htmlBuffer.writeln('</div>');
+      }
+      
       htmlBuffer.writeln('</div>');
       
       htmlBuffer.writeln('</div>'); // 结束 content
@@ -1822,5 +1997,20 @@ class WatermarkPainter extends CustomPainter {
     return oldDelegate is! WatermarkPainter ||
         oldDelegate.text != text ||
         oldDelegate.textStyle != textStyle;
+  }
+}
+
+/// 将图片文件转换为Base64字符串
+Future<String> _imageToBase64(String imagePath) async {
+  try {
+    final file = File(imagePath);
+    if (await file.exists()) {
+      final bytes = await file.readAsBytes();
+      return base64Encode(bytes);
+    }
+    return '';
+  } catch (e) {
+    print('图片转Base64失败: $e');
+    return '';
   }
 }
